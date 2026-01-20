@@ -1,0 +1,113 @@
+# IDE and Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# CakePHP
+/watm/watm/config/app_local.php
+/watm/watm/config/.env
+/watm/watm/logs/*
+/watm/watm/tmp/*
+!/watm/watm/tmp/empty
+/watm/watm/vendor/
+/watm/watm/composer.phar
+
+# Node.js
+/watm/checkins/node_modules/
+/watm/checkins/.env
+/watm/checkins/npm-debug.log*
+/watm/checkins/yarn-debug.log*
+/watm/checkins/yarn-error.log*
+/watm/checkins/.npm
+/watm/checkins/.eslintcache
+
+# PM2
+/watm/checkins/.pm2/
+/watm/checkins/ecosystem.config.js
+
+# DDEV
+/watm/.ddev/.global_commands/
+/watm/.ddev/.homeadditions/
+/watm/.ddev/.ssh-agent-container-id
+/watm/.ddev/.ddev-docker-*
+/watm/.ddev/db_snapshots/
+/watm/.ddev/.gitignore
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.pid
+*.seed
+*.gz
+
+# Coverage and testing
+/watm/watm/coverage/
+/watm/watm/.phpunit.result.cache
+/watm/checkins/coverage/
+
+# Database dumps
+*.sql
+*.sqlite
+*.db
+
+# Uploaded files and user content
+/watm/watm/webroot/files/
+/watm/watm/webroot/uploads/
+
+# Compiled assets
+/watm/watm/webroot/css/compiled/
+/watm/watm/webroot/js/compiled/
+
+# Package manager lock files (optional - uncomment if you don't want to track)
+# /watm/watm/composer.lock
+# /watm/checkins/package-lock.json
+
+# Environment-specific configuration
+*.local.php
+.env.local
+.env.*.local
+
+# Backup files
+*.bak
+*.backup
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.rar
+
+# AWS and credentials
+.aws/
+credentials
+
+# Documentation builds
+/docs/_build/
+
+# Cache
+.cache/
+*.cache
+
+# Exclude all top-level folders except specific ones
+/*
+!/Configurations/
+!/DataPurging/
+!/HistoricalDataUsage/
+!/Templates/
+!/.gitignore
+!/README.md

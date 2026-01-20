@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--
+  WATM Config Management System - Layer Configuration Demo
+  Version: 1.5 (Updated: 2026-01-12)
+
+  INHERITANCE LOGIC (PRD v1.5):
+  - Single-Factor Layers (Model, Carrier, Service Plan, Company):
+    * Display inherited values from GLOBAL LAYER ONLY
+    * Cannot show "inherited from Model/Carrier/Plan" due to many-to-many relationships
+    * Multi-factor combinations are managed via Conditional Rules interface
+
+  - Device Layer:
+    * Can display full 11-level resolution with source attribution
+    * Why: Each device has specific Model, Carrier, ServicePlan, Company values
+    * Shows sources: "From Global", "From Model (i-22)", "Two-Way Rule (Model+Carrier)", etc.
+
+  CONDITIONAL RULES:
+  - Two-Way Rules (6 combinations): Any 2-factor combinations (Model+Carrier, Carrier+Plan, Model+Plan, etc.)
+  - Three-Way Rules: Model + Carrier + Service Plan (service plan baselines)
+  - Four-Way Rules: Model + Carrier + Service Plan + Customer (customer exceptions)
+-->
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WATM Layer-Based Configuration - Prototype</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #f5f7fa;
+      color: #2c3e50;
+      line-height: 1.6;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px 40px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    .header p {
+      opacity: 0.9;
+      font-size: 14px;
+      margin-top: 5px;
+    }
+
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 30px 40px;
+    }
+
+    .breadcrumb {
+      background: white;
+      padding: 15px 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+    }
+
+    .breadcrumb-item {
+      color: #64748b;
+    }
+
+    .breadcrumb-item.active {
+      color: #667eea;
+      font-weight: 500;
+    }
+
+    .breadcrumb-separator {
+      color: #cbd5e1;
+    }
+
+    .layer-selector {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+
+    .layer-card {
+      background: white;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+    }
+
+    .layer-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .layer-card.active {
+      border-color: #667eea;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .layer-number {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      width: 24px;
+      height: 24px;
+      background: #e2e8f0;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+    }
+
+    .layer-card.active .layer-number {
+      background: rgba(255,255,255,0.3);
+      color: white;
+    }
+
+    .layer-icon {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+
+    .layer-name {
+      font-weight: 600;
+      font-size: 16px;
+      margin-bottom: 5px;
+    }
+
+    .layer-desc {
+      font-size: 12px;
+      opacity: 0.7;
+    }
+
+    .config-panel {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      background: #f8fafc;
+      padding: 20px 30px;
+      border-bottom: 2px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .panel-title {
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .panel-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5568d3;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+      background: white;
+      color: #667eea;
+      border: 2px solid #667eea;
+    }
+
+    .btn-secondary:hover {
+      background: #f8f9ff;
+    }
+
+    .config-section {
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .config-section:last-child {
+      border-bottom: none;
+    }
+
+    .section-header {
+      padding: 20px 30px;
+      background: #f8fafc;
+      font-weight: 600;
+      font-size: 16px;
+      color: #334155;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.2s;
+    }
+
+    .section-header:hover {
+      background: #f1f5f9;
+    }
+
+    .section-body {
+      padding: 20px 30px;
+    }
+
+    .config-item {
+      display: grid;
+      grid-template-columns: 300px 1fr 150px;
+      gap: 20px;
+      padding: 20px 0;
+      border-bottom: 1px solid #f1f5f9;
+      align-items: start;
+    }
+
+    .config-item:last-child {
+      border-bottom: none;
+    }
+
+    .config-label {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .label-name {
+      font-weight: 500;
+      color: #1e293b;
+      font-size: 14px;
+    }
+
+    .label-key {
+      font-size: 12px;
+      color: #64748b;
+      font-family: 'Monaco', 'Courier New', monospace;
+    }
+
+    .label-desc {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 5px;
+    }
+
+    .config-input-group {
+      position: relative;
+    }
+
+    .config-input {
+      width: 100%;
+      padding: 10px 15px;
+      border: 2px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+
+    .config-input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .config-input.inherited {
+      background: #fef3c7;
+      border-color: #fbbf24;
+    }
+
+    .config-input.overridden {
+      background: #dbeafe;
+      border-color: #3b82f6;
+      font-weight: 500;
+    }
+
+    .config-input.null {
+      background: #fee2e2;
+      border-color: #ef4444;
+      font-style: italic;
+    }
+
+    .inheritance-indicator {
+      position: absolute;
+      right: -140px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .inherited-from {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .overridden-here {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .explicitly-null {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .config-source {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: flex-end;
+    }
+
+    .source-badge {
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      text-align: center;
+    }
+
+    .source-global { background: #f1f5f9; color: #475569; }
+    .source-model { background: #ddd6fe; color: #5b21b6; }
+    .source-carrier { background: #fce7f3; color: #9f1239; }
+    .source-service-plan { background: #d1fae5; color: #065f46; }
+    .source-company { background: #dbeafe; color: #1e40af; }
+    .source-device { background: #fef3c7; color: #92400e; }
+
+    .inheritance-chain {
+      display: flex;
+      gap: 5px;
+      margin-top: 5px;
+    }
+
+    .chain-link {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      background: #f1f5f9;
+      color: #64748b;
+    }
+
+    .chain-link.has-value {
+      background: #dbeafe;
+      color: #1e40af;
+      font-weight: 600;
+    }
+
+    .resolution-preview {
+      background: #f8fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 30px;
+    }
+
+    .preview-title {
+      font-weight: 600;
+      margin-bottom: 15px;
+      color: #334155;
+    }
+
+    .preview-path {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .preview-layer {
+      padding: 8px 15px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .preview-layer.checked {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .preview-layer.skipped {
+      background: #f1f5f9;
+      color: #94a3b8;
+      opacity: 0.6;
+    }
+
+    .preview-arrow {
+      color: #cbd5e1;
+      font-size: 18px;
+    }
+
+    .legend {
+      background: white;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+
+    .legend-title {
+      font-weight: 600;
+      margin-bottom: 15px;
+      color: #334155;
+    }
+
+    .legend-items {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+    }
+
+    .legend-color {
+      width: 40px;
+      height: 30px;
+      border-radius: 4px;
+      border: 2px solid;
+    }
+
+    .layer-rules-btn {
+      margin-top: 10px;
+      padding: 6px 12px;
+      font-size: 11px;
+      background: rgba(102, 126, 234, 0.1);
+      color: #667eea;
+      border: 1px solid rgba(102, 126, 234, 0.3);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    .layer-rules-btn:hover {
+      background: rgba(102, 126, 234, 0.2);
+      border-color: rgba(102, 126, 234, 0.5);
+      transform: translateY(-1px);
+    }
+
+    .layer-rules-btn.four-way {
+      background: rgba(231, 76, 60, 0.1);
+      color: #e74c3c;
+      border-color: rgba(231, 76, 60, 0.3);
+    }
+
+    .layer-rules-btn.four-way:hover {
+      background: rgba(231, 76, 60, 0.2);
+      border-color: rgba(231, 76, 60, 0.5);
+    }
+
+    .layer-rules-btn.three-way {
+      background: rgba(155, 89, 182, 0.1);
+      color: #9b59b6;
+      border-color: rgba(155, 89, 182, 0.3);
+    }
+
+    .layer-rules-btn.three-way:hover {
+      background: rgba(155, 89, 182, 0.2);
+      border-color: rgba(155, 89, 182, 0.5);
+    }
+
+    @media (max-width: 1400px) {
+      .layer-selector {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .layer-selector {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .config-item {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      .inheritance-indicator {
+        position: static;
+        transform: none;
+        margin-top: 5px;
+      }
+
+      .legend-items {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🔄 WATM Layer-Based Configuration</h1>
+    <p>Configure device parameters across 6 hierarchical layers with automatic inheritance</p>
+  </div>
+
+  <div class="container">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+      <span class="breadcrumb-item">Company: Matrix ATM Store</span>
+      <span class="breadcrumb-separator">›</span>
+      <span class="breadcrumb-item">Service Plan: ATM Basic</span>
+      <span class="breadcrumb-separator">›</span>
+      <span class="breadcrumb-item active">Device: ATM_STORE_001</span>
+    </div>
+
+    <!-- Layer Selector -->
+    <div class="layer-selector">
+      <div class="layer-card" onclick="selectLayer('global')">
+        <div class="layer-number">1</div>
+        <div class="layer-icon">🌐</div>
+        <div class="layer-name">Global</div>
+        <div class="layer-desc">System-wide defaults</div>
+      </div>
+
+      <div class="layer-card" onclick="selectLayer('model')">
+        <div class="layer-number">2</div>
+        <div class="layer-icon">📱</div>
+        <div class="layer-name">Model</div>
+        <div class="layer-desc">I-22, I-52, IR611, IR615</div>
+      </div>
+
+      <div class="layer-card" onclick="selectLayer('carrier')">
+        <div class="layer-number">3</div>
+        <div class="layer-icon">📡</div>
+        <div class="layer-name">Carrier</div>
+        <div class="layer-desc">Verizon, AT&T, T-Mobile</div>
+        <button class="layer-rules-btn" onclick="event.stopPropagation(); showTwoWayRules()">
+          🔵 Two-Way Rules
+        </button>
+      </div>
+
+      <div class="layer-card" onclick="selectLayer('service_plan')">
+        <div class="layer-number">4</div>
+        <div class="layer-icon">📋</div>
+        <div class="layer-name">Service Plan</div>
+        <div class="layer-desc">ATM Basic, ATM Premium</div>
+        <button class="layer-rules-btn three-way" onclick="event.stopPropagation(); showThreeWayRules()">
+          🟣 Three-Way Rules
+        </button>
+      </div>
+
+      <div class="layer-card" onclick="selectLayer('company')">
+        <div class="layer-number">5</div>
+        <div class="layer-icon">🏢</div>
+        <div class="layer-name">Company</div>
+        <div class="layer-desc">Matrix ATM Store</div>
+        <button class="layer-rules-btn four-way" onclick="event.stopPropagation(); showFourWayRules()">
+          🔴 Customer Exceptions
+        </button>
+      </div>
+
+      <div class="layer-card active" onclick="selectLayer('device')">
+        <div class="layer-number">6</div>
+        <div class="layer-icon">💻</div>
+        <div class="layer-name">Device</div>
+        <div class="layer-desc">ATM_STORE_001</div>
+      </div>
+    </div>
+
+    <!-- Configuration Panel -->
+    <div class="config-panel">
+      <div class="panel-header">
+        <div class="panel-title">Device Configuration: ATM_STORE_001</div>
+        <div class="panel-actions">
+          <button class="btn btn-secondary" onclick="showInheritanceView()">
+            <span>🔍</span> Show Inheritance
+          </button>
+          <button class="btn btn-secondary" onclick="exportConfig()">
+            <span>📤</span> Export
+          </button>
+          <button class="btn btn-primary" onclick="saveConfig()">
+            <span>💾</span> Save Changes
+          </button>
+        </div>
+      </div>
+
+      <!-- System Identification Section -->
+      <div class="config-section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span>🏷️ System Identification</span>
+          <span>▼</span>
+        </div>
+        <div class="section-body">
+          <div class="config-item">
+            <div class="config-label">
+              <span class="label-name">Device Hostname</span>
+              <span class="label-key">hostname</span>
+              <span class="label-desc">Unique identifier for the device on the network</span>
+            </div>
+            <div class="config-input-group">
+              <input type="text" class="config-input overridden" value="ATM_STORE_001" onchange="markModified(this)">
+              <div class="inheritance-indicator overridden-here">Set at Device</div>
+            </div>
+            <div class="config-source">
+              <span class="source-badge source-device">Device</span>
+              <div class="inheritance-chain">
+                <span class="chain-link">Global</span>
+                <span class="chain-link">Model</span>
+                <span class="chain-link">Company</span>
+                <span class="chain-link has-value">Device ✓</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="config-item">
+            <div class="config-label">
+              <span class="label-name">NTP Server</span>
+              <span class="label-key">ntp_server</span>
+              <span class="label-desc">Network Time Protocol server for time synchronization</span>
+            </div>
+            <div class="config-input-group">
+              <input type="text" class="config-input inherited" value="pool.ntp.org" readonly>
+              <div class="inheritance-indicator inherited-from">From Global</div>
+            </div>
+            <div class="config-source">
+              <span class="source-badge source-global">Global</span>
+              <div class="inheritance-chain">
+                <span class="chain-link has-value">Global ✓</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Network Configuration Section -->
+      <div class="config-section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span>🌐 Network Configuration</span>
+          <span>▼</span>
+        </div>
+        <div class="section-body">
+          <div class="config-item">
+            <div class="config-label">
+              <span class="label-name">LAN IP Address</span>
+              <span class="label-key">lan0_ip</span>
+              <span class="label-desc">IPv4 address for the LAN interface</span>
+            </div>
+            <div class="config-input-group">
+              <input type="text" class="config-input inherited" value="192.168.1.90" readonly>
+              <div class="inheritance-indicator inherited-from">From Model</div>
+            </div>
+            <div class="config-source">
+              <span class="source-badge source-model">Model (I-22)</span>
+              <div class="inheritance-chain">
+                <span class="chain-link">Global</span>
+                <span class="chain-link has-value">Model ✓</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="config-item">
+            <div class="config-label">
+              <span class="label-name">LAN Subnet Mask</span>
+              <span class="label-key">lan0_netmask</span>
+              <span class="label-desc">Subnet mask for the LAN interface</span>
+            </div>
+            <div class="config-input-group">
+              <input type="text" class="config-input inherited" value="255.255.255.0" readonly>
+              <div class="inheritance-indicator inherited-from">From Global</div>
+            </div>
+            <div class="config-source">
+              <span class="source-badge source-global">Global</span>
+              <div class="inheritance-chain">
+                <span class="chain-link has-value">Global ✓</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="config-item">
+            <div class="config-label">
+              <span class="label-name">WAN Protocol</span>
+              <span class="label-key">wan1_proto</span>
+              <span class="label-desc">Connection protocol for WAN interface</span>
+            </div>
+            <div class="config-input-group">
+              <select class="config-input inherited">
+                <option value="dialup" selected>Dialup (PPP)</option>
+                <option value="static">Static IP</option>
+                <option value="dhcp">DHCP</option>
+              </select>
+              <div class="inheritance-indicator inherited-from">From Carrier</div>
+            </div>
+            <div class="config-source">
+              <span class="source-badge source-carrier">Carrier (Verizon)</span>
+              <div class="inheritance-chain">
+                <span class="chain-link">Global</span>
+                <span class="chain-link has-value">Carrier ✓</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="config-item">
+            <div class="config-label">
+              <span class="label-name">WAN APN</span>
+              <span class="label-key">wan1_ppp_apn</span>
+              <span class="label-desc">Access Point Name for cellular connection</span>
+            </div>
+            <div class="config-input-group">
+              <input type="text" class="config-input inherited" value="Matrxatm.gw12.vzwentp" readonly>
+              <div class="inheritance-indicator inherited-from">From Carrier</div>
+            </div>
+            <div class="config-source">
+              <span class="source-badge source-carrier">Carrier (Verizon)</span>
+              <div class="inheritance-chain">
+                <span class="chain-link">Global</span>
+                <span class="chain-link has-value">Carrier ✓</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Security Section -->
+      <div class="config-section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span>🔒 Security</span>
+          <span>▼</span>
+        </div>
+        <div class="section-body">
+          <div class="config-item">
+            <div class="config-label">
+              <span class="label-name">Admin Password</span>
+              <span class="label-key">adm_passwd</span>
+              <span class="label-desc">Administrator password (encrypted)</span>
+            </div>
+            <div class="config-input-group">
+              <input type="password" class="config-input overridden" value="**************" onchange="markModified(this)">
+              <div class="inheritance-indicator overridden-here">Set at Company</div>
+            </div>
+            <div class="config-source">
+              <span class="source-badge source-company">Company</span>
+              <div class="inheritance-chain">
+                <span class="chain-link has-value">Company ✓</span>
+                <span class="chain-link">Device</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="config-item">
+            <div class="config-label">
+              <span class="label-name">Firewall ACL</span>
+              <span class="label-key">fw_acl</span>
+              <span class="label-desc">Firewall access control list rules</span>
+            </div>
+            <div class="config-input-group">
+              <textarea class="config-input inherited" rows="3" readonly>permit;tcp;any;0;192.168.1.0;24;8080;
+deny;tcp;any;0;192.168.1.0;24;22;</textarea>
+              <div class="inheritance-indicator inherited-from">From Service Plan</div>
+            </div>
+            <div class="config-source">
+              <span class="source-badge source-service-plan">Service Plan (ATM Basic)</span>
+              <div class="inheritance-chain">
+                <span class="chain-link">Global</span>
+                <span class="chain-link has-value">Service Plan ✓</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Device Management Section -->
+      <div class="config-section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span>⚙️ Device Management</span>
+          <span>▼</span>
+        </div>
+        <div class="section-body">
+          <div class="config-item">
+            <div class="config-label">
+              <span class="label-name">Enable Dual SIM</span>
+              <span class="label-key">dual_sim_enable</span>
+              <span class="label-desc">Enable dual SIM card failover functionality</span>
+            </div>
+            <div class="config-input-group">
+              <select class="config-input inherited">
+                <option value="0">Disabled</option>
+                <option value="1" selected>Enabled</option>
+              </select>
+              <div class="inheritance-indicator inherited-from">From Carrier</div>
+            </div>
+            <div class="config-source">
+              <span class="source-badge source-carrier">Carrier (Verizon)</span>
+              <div class="inheritance-chain">
+                <span class="chain-link">Model</span>
+                <span class="chain-link has-value">Carrier ✓</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="config-item">
+            <div class="config-label">
+              <span class="label-name">RMON Server Port</span>
+              <span class="label-key">rmon_server_port</span>
+              <span class="label-desc">Remote monitoring server port number</span>
+            </div>
+            <div class="config-input-group">
+              <input type="number" class="config-input inherited" value="8002" readonly>
+              <div class="inheritance-indicator inherited-from">From Global</div>
+            </div>
+            <div class="config-source">
+              <span class="source-badge source-global">Global</span>
+              <div class="inheritance-chain">
+                <span class="chain-link has-value">Global ✓</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="config-item">
+            <div class="config-label">
+              <span class="label-name">Enable MQTT</span>
+              <span class="label-key">mqtt_enable</span>
+              <span class="label-desc">Enable MQTT device manager connection</span>
+            </div>
+            <div class="config-input-group">
+              <select class="config-input null">
+                <option value="" selected>(Explicitly NULL - Disabled by admin)</option>
+                <option value="0">Disabled</option>
+                <option value="1">Enabled</option>
+              </select>
+              <div class="inheritance-indicator explicitly-null">NULL at Device</div>
+            </div>
+            <div class="config-source">
+              <span class="source-badge source-device">Device (NULL)</span>
+              <div class="inheritance-chain">
+                <span class="chain-link">Global</span>
+                <span class="chain-link">Model</span>
+                <span class="chain-link has-value">Device (NULL)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Configuration Resolution Preview -->
+    <div class="resolution-preview">
+      <div class="preview-title">🔄 Configuration Resolution Path</div>
+      <div class="preview-path">
+        <div class="preview-layer checked">
+          <span>6️⃣</span>
+          <span>Device</span>
+        </div>
+        <div class="preview-arrow">→</div>
+        <div class="preview-layer checked">
+          <span>5️⃣</span>
+          <span>Company</span>
+        </div>
+        <div class="preview-arrow">→</div>
+        <div class="preview-layer skipped">
+          <span>4️⃣</span>
+          <span>Service Plan</span>
+        </div>
+        <div class="preview-arrow">→</div>
+        <div class="preview-layer checked">
+          <span>3️⃣</span>
+          <span>Carrier</span>
+        </div>
+        <div class="preview-arrow">→</div>
+        <div class="preview-layer checked">
+          <span>2️⃣</span>
+          <span>Model</span>
+        </div>
+        <div class="preview-arrow">→</div>
+        <div class="preview-layer checked">
+          <span>1️⃣</span>
+          <span>Global</span>
+        </div>
+      </div>
+      <p style="margin-top: 15px; font-size: 13px; color: #64748b;">
+        System walks from Device → Global to resolve each parameter value. First non-NULL value wins.
+      </p>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+      <div class="legend-title">📖 Configuration States Legend</div>
+      <div class="legend-items">
+        <div class="legend-item">
+          <div class="legend-color" style="background: #dbeafe; border-color: #3b82f6;"></div>
+          <div>
+            <strong>Overridden</strong><br>
+            <small>Value set at this layer</small>
+          </div>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #fef3c7; border-color: #fbbf24;"></div>
+          <div>
+            <strong>Inherited</strong><br>
+            <small>Value from parent layer</small>
+          </div>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #fee2e2; border-color: #ef4444;"></div>
+          <div>
+            <strong>Explicitly NULL</strong><br>
+            <small>Cleared by administrator</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function selectLayer(layer) {
+      const layers = ['global', 'model', 'carrier', 'service_plan', 'company', 'device'];
+      const layerNames = {
+        'global': 'Global Configuration',
+        'model': 'Model Configuration (I-22)',
+        'carrier': 'Carrier Configuration (Verizon)',
+        'service_plan': 'Service Plan Configuration (ATM Basic)',
+        'company': 'Company Configuration (Matrix ATM Store)',
+        'device': 'Device Configuration (ATM_STORE_001)'
+      };
+
+      // Update active layer card
+      document.querySelectorAll('.layer-card').forEach(card => {
+        card.classList.remove('active');
+      });
+      event.currentTarget.classList.add('active');
+
+      // Update panel title
+      document.querySelector('.panel-title').textContent = layerNames[layer];
+
+      alert(`Switched to ${layerNames[layer]}\n\n(In production, this would load configuration values for this layer)`);
+    }
+
+    function toggleSection(header) {
+      const body = header.nextElementSibling;
+      const arrow = header.querySelector('span:last-child');
+
+      if (body.style.display === 'none') {
+        body.style.display = 'block';
+        arrow.textContent = '▼';
+      } else {
+        body.style.display = 'none';
+        arrow.textContent = '▶';
+      }
+    }
+
+    function markModified(input) {
+      input.style.borderColor = '#f59e0b';
+      input.style.background = '#fffbeb';
+    }
+
+    function showInheritanceView() {
+      alert('🔍 Inheritance View\n\nShows:\n• Full resolution chain for each parameter\n• Which layers have values\n• Why a specific value was chosen\n• Override history\n\n(Detailed view would open here in production)');
+    }
+
+    function exportConfig() {
+      alert('📤 Export Configuration\n\nOptions:\n• Export effective configuration (resolved values)\n• Export layer-specific values only\n• Include or exclude inherited values\n• Format: JSON, YAML, or .dat file\n\n(Export dialog would open here in production)');
+    }
+
+    function saveConfig() {
+      const modifiedInputs = document.querySelectorAll('.config-input[style*="border-color: rgb(245, 158, 11)"]');
+
+      if (modifiedInputs.length === 0) {
+        alert('ℹ️ No changes to save');
+        return;
+      }
+
+      alert(`💾 Saving ${modifiedInputs.length} modified parameter(s)...\n\n✅ Configuration saved successfully!\n\n(In production, this would:\n1. Validate all changes\n2. Save to database\n3. Update device configuration\n4. Log the changes)`);
+
+      // Reset modified state
+      modifiedInputs.forEach(input => {
+        input.style.borderColor = '';
+        input.style.background = '';
+      });
+    }
+
+    function showTwoWayRules() {
+      alert('🔵 Two-Way Conditional Rules (6 Combinations)\n\n' +
+        'Manage rules for ANY TWO of the four factors:\n\n' +
+        'SUPPORTED COMBINATIONS:\n' +
+        '1. Model + Carrier - Carrier features per model\n' +
+        '   • i-22 + VZW → mqtt_enable=1\n' +
+        '   • i-22 + VZW → advanced=1\n\n' +
+        '2. Carrier + Service Plan - Carrier policies by plan\n' +
+        '   • VZW + ATM → traffic_day_threshold=3584MB\n\n' +
+        '3. Model + Service Plan - Model tier by plan\n' +
+        '   • i-22 + ATM → traffic_day_threshold=350MB\n\n' +
+        '4. Carrier + Customer - Customer carrier agreements\n' +
+        '5. Model + Customer - Customer model configs\n' +
+        '6. Service Plan + Customer - Customer plan exceptions\n\n' +
+        'Priority Level: 6 in 11-level hierarchy (with sub-priorities 6.1-6.6)\n\n' +
+        'These rules define values based on specific two-factor combinations.\n\n' +
+        '(In production, this would open the Conditional Rules Management interface filtered to show all Two-Way Rules involving the current layer)');
+    }
+
+    function showThreeWayRules() {
+      alert('🟣 Three-Way Conditional Rules\n\n' +
+        'Manage rules for: Model + Carrier + Service Plan\n\n' +
+        'Example Baseline Rules for ATM Plan:\n' +
+        '• i-22 + ATT + ATM → fw_acl=[40 whitelist rules]\n' +
+        '• i-22 + ATT + ATM → traffic_threshold=350MB\n' +
+        '• i-22 + VZW + ATM → fw_acl=[40 whitelist rules]\n\n' +
+        'Priority Level: 4 in 11-level hierarchy\n\n' +
+        'These rules define service plan baselines that apply to ALL customers with this Model+Carrier+ServicePlan combination.\n\n' +
+        'Current Stats:\n' +
+        '• 8 baseline rules for ATM plan\n' +
+        '• Affecting 12,000+ devices\n\n' +
+        '(In production, this would open the Conditional Rules Management interface filtered to show only Three-Way Rules for the ATM plan)');
+    }
+
+    function showFourWayRules() {
+      alert('🔴 Customer-Specific Exceptions (Four-Way Rules)\n\n' +
+        'Manage rules for: Model + Carrier + Service Plan + Company\n\n' +
+        'Example Exceptions for Matrix ATM Store:\n' +
+        '• i-22 + ATT + ATM + Matrix → fw_acl=[custom rules]\n' +
+        '• i-22 + ATT + ATM + Matrix → ntp_server=time.matrix.com\n\n' +
+        'Priority Level: 2 in 11-level hierarchy\n' +
+        '(Overrides Three-Way Rule baselines for this customer only)\n\n' +
+        'These rules enable customer-specific exceptions to service plan policies. The baseline Three-Way Rule applies to all customers, but Four-Way Rules override for specific customers.\n\n' +
+        'Current Stats:\n' +
+        '• 3 customer exceptions for Matrix ATM Store\n' +
+        '• Affecting 500 devices\n\n' +
+        'ℹ️ Note: Create Three-Way Rule baseline first, then add Four-Way Rules for customers needing exceptions.\n\n' +
+        '(In production, this would open the Conditional Rules Management interface filtered to show only customer exceptions for Matrix ATM Store)');
+    }
+  </script>
+</body>
+</html>
