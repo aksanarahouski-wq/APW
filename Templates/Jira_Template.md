@@ -1,44 +1,12 @@
-# Product Requirements Document (PRD) Template
-## [Feature/Project Name]
-
-**Document Version:** 1.0
-**Date:** [Date]
-**Author:** [Author Name/Team]
-**Status:** [Draft for Review | In Review | Approved | In Progress]
-**Related Tickets:** [WATM-XXXX](https://orases.atlassian.net/browse/WATM-XXXX)
-**Document Owner:** [Name]
-
----
-
-## Table of Contents
-
-1. [Executive Summary](#executive-summary)
-2. [Background and Problem Statement](#background-and-problem-statement)
-3. [Goals and Objectives](#goals-and-objectives)
-4. [Target Users](#target-users)
-5. [User Stories](#user-stories)
-6. [Scope](#scope)
-7. [Functional Requirements](#functional-requirements)
-8. [Technical Design](#technical-design) _(optional for complex features)_
-9. [Testing Requirements](#testing-requirements)
-10. [Dependencies and Risks](#dependencies-and-risks)
-11. [Implementation Plan](#implementation-plan)
-12. [Success Metrics](#success-metrics)
-13. [Open Questions](#open-questions)
-14. [Document History](#document-history)
-
+# Small Request Requirements Document Template
+## [Ticket Name]
 ---
 
 ## Executive Summary
 
-_Brief 2-3 paragraph overview of what this feature/project is about. Should be understandable by non-technical stakeholders._
+_Brief overview of what this feature/enhancement is about. Should be understandable by non-technical stakeholders._
 
-[Describe what the feature is, why it's needed, and what problem it solves]
-
-### Key Features
-- **Feature 1**: [Brief description]
-- **Feature 2**: [Brief description]
-- **Feature 3**: [Brief description]
+[Describe what the feature/enhancement is, why it's needed, and what problem it solves]
 
 ### Business Impact
 - [Impact on revenue, costs, users, etc.]
@@ -114,7 +82,6 @@ _What this project will NOT include_
 - **Pain Point**: [Current problem they face]
 - **Benefit**: [How this feature helps them]
 
-
 ---
 
 ## Scope
@@ -179,18 +146,32 @@ _What this project will NOT include_
 
 ---
 
+## Technical Notes
+
+### Data Model Changes
+
+[Database schema changes, new tables, modifications to existing tables]
+
+### Files to Modify
+
+[New files, modifications to existing files]
+
+### Integration Points
+
+[Systems or services this feature integrates with]
+
+### Technical Constraints
+
+- [Performance requirements]
+- [Scalability considerations]
+- [Security requirements]
+- [Backwards compatibility needs]
+
+---
+
 ## Testing Requirements
 
-### Test Plan Overview
-
-**Testing Phases:**
-1. User Acceptance Testing (UAT) (Business stakeholders)
-2. Regression Testing (QA)
-3. Performance Testing _(if applicable)_
-
 ### Integration Test Cases
-
-#### End-to-End Workflows
 
 **Test Case IT-1: [Test Scenario Name]**
 1. [Setup/preconditions]
@@ -272,66 +253,6 @@ _What this project will NOT include_
 
 ---
 
-## Implementation Plan
-
-### Phase 1: [Phase Name] (Duration)
-- [ ] [Specific deliverable or task]
-- [ ] [Specific deliverable or task]
-- [ ] [Specific deliverable or task]
-
-### Phase 2: [Phase Name] (Duration)
-- [ ] [Specific deliverable or task]
-- [ ] [Specific deliverable or task]
-- [ ] [Specific deliverable or task]
-
-### Phase 3: [Phase Name] (Duration)
-- [ ] [Specific deliverable or task]
-- [ ] [Specific deliverable or task]
-- [ ] [Specific deliverable or task]
-
-### Phase 4: [Phase Name] (Duration)
-- [ ] [Specific deliverable or task]
-- [ ] [Specific deliverable or task]
-- [ ] [Specific deliverable or task]
-
-**Total Estimated Timeline:** [X weeks/months]
-
-### Rollout Strategy
-
-_How will this feature be deployed and released?_
-
-- **Deployment Approach**: [All at once / Phased / Feature flag / Canary]
-- **User Communication**: [How will users be informed]
-- **Training Needed**: [Documentation, training sessions, etc.]
-- **Rollback Plan**: [How to revert if issues occur]
-
----
-
-## Success Metrics
-
-### Key Performance Indicators (KPIs)
-
-**Performance Metrics:**
-- [Metric name]: Baseline [X] → Target [Y]
-- [Metric name]: Baseline [X] → Target [Y]
-- [Metric name]: Baseline [X] → Target [Y]
-
-**User Adoption Metrics:**
-- [Metric name]: Target [X]
-- [Metric name]: Target [X]
-
-**Business Metrics:**
-- [Metric name]: Baseline [X] → Target [Y]
-- [Metric name]: Target [X]
-
-### Measurement Plan
-
-- **Measurement Period**: [How long to measure post-launch]
-- **Review Cadence**: [When to review metrics]
-- **Success Threshold**: [What level indicates success]
-
----
-
 ## Open Questions
 
 _Questions that need answers before or during implementation_
@@ -352,69 +273,3 @@ _Questions that need answers before or during implementation_
 - **Decision Needed By**: [Date or milestone]
 
 ---
-
-## Next Steps
-
-1. **[Action Item]** - [Owner] by [Date]
-2. **[Action Item]** - [Owner] by [Date]
-3. **[Action Item]** - [Owner] by [Date]
-4. **[Action Item]** - [Owner] by [Date]
-
----
-
-## Document History
-
-| Version | Date | Author | Changes |
-|---------|------|--------|---------|
-| 1.0 | [Date] | [Author] | Initial PRD created |
-| 1.1 | [Date] | [Author] | [Description of changes] |
-
----
-
-**Document Status:** [Draft | In Review | Approved]
-**Next Review Date:** [Date]
-**Approvals Required:**
-- [ ] Product Manager
-- [ ] Engineering Lead
-- [ ] QA Lead
-- [ ] Business Stakeholders
-- [ ] [Other stakeholder]
-
----
-
-END OF DOCUMENT
-
----
-
-## Template Usage Guide
-
-**For Simple Features** (like Daily Usage Feature):
-- Keep Executive Summary brief
-- Simplify User Stories section
-- Omit Technical Design section
-- Omit Rollout Strategy
-- Omit Implementation Plan
-- Omit Success Metrics
-- Omot Next Steps
-- Keep Testing Requirements high-level
-- Focus on clear Acceptance Criteria
-
-**For Medium Features**:
-- Include all standard sections
-- Technical Design can be brief
-- Standard testing approach
-- Clear implementation phases
-
-**For Complex Features** (like Service Plan Enhancements):
-- Expand all sections with detailed information
-- Include comprehensive Technical Design
-- Detailed test cases with multiple scenarios
-- Risk analysis with mitigation strategies
-- Phased implementation plan
-
-**Key Principles:**
-1. Make it actionable - include specific, measurable criteria
-2. Consider all stakeholders - technical and business
-3. Be realistic about scope and timeline
-4. Document decisions and rationale
-5. Keep it living - update as understanding evolves
