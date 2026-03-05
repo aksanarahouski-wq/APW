@@ -103,11 +103,8 @@ credentials
 .cache/
 *.cache
 
-# Exclude all top-level folders except specific ones
-/*
-!/Configurations/
-!/DataPurging/
-!/HistoricalDataUsage/
-!/Templates/
-!/.gitignore
-!/README.md
+# Exclude watm folder (application source code); track everything else
+/watm/
+
+# Claude Code
+.claude/
