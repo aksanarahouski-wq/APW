@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuration Management System - Implementation Roadmap</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #F8F9FA;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 24px;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1A1A2E;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: #6B7280;
+      margin-bottom: 40px;
+      text-align: center;
+    }
+
+    .diagram-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      padding-bottom: 16px;
+    }
+
+    .diagram {
+      display: flex;
+      align-items: flex-start;
+      gap: 0;
+      min-width: 1100px;
+      width: max-content;
+      margin: 0 auto;
+      padding: 20px 40px;
+    }
+
+    /* Phase card */
+    .phase {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 140px;
+      flex-shrink: 0;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .phase:hover .phase-card {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.14);
+    }
+
+    .phase-card {
+      width: 130px;
+      border-radius: 12px;
+      padding: 16px 12px 14px;
+      text-align: center;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+      position: relative;
+      border: 2px solid transparent;
+    }
+
+    .phase:focus .phase-card,
+    .phase.active .phase-card {
+      border-color: #1976D2;
+      box-shadow: 0 0 0 3px rgba(25,118,210,0.2);
+    }
+
+    /* Badge */
+    .badge {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 10px;
+      color: #fff;
+    }
+
+    .phase-icon {
+      font-size: 22px;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .phase-number {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+      opacity: 0.7;
+    }
+
+    .phase-title {
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.3;
+      margin-bottom: 6px;
+    }
+
+    .phase-layer {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 20px;
+      display: inline-block;
+    }
+
+    .phase-priority {
+      font-size: 10px;
+      margin-top: 8px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* Connector arrow */
+    .connector {
+      display: flex;
+      align-items: center;
+      padding-top: 54px;
+      flex-shrink: 0;
+    }
+
+    .connector svg {
+      display: block;
+    }
+
+    /* Color themes per phase */
+    /* Phase 1 - Critical - Blue */
+    .phase-1 .phase-card { background: #E3F2FD; }
+    .phase-1 .badge { background: #1565C0; }
+    .phase-1 .phase-number { color: #1565C0; }
+    .phase-1 .phase-title { color: #0D47A1; }
+    .phase-1 .phase-layer { background: #BBDEFB; color: #0D47A1; }
+    .phase-1 .phase-priority { color: #B71C1C; }
+
+    /* Phase 2 - High - Teal */
+    .phase-2 .phase-card { background: #E0F2F1; }
+    .phase-2 .badge { background: #00796B; }
+    .phase-2 .phase-number { color: #00796B; }
+    .phase-2 .phase-title { color: #004D40; }
+    .phase-2 .phase-layer { background: #B2DFDB; color: #004D40; }
+    .phase-2 .phase-priority { color: #E65100; }
+
+    /* Phase 3 - High - Green */
+    .phase-3 .phase-card { background: #E8F5E9; }
+    .phase-3 .badge { background: #388E3C; }
+    .phase-3 .phase-number { color: #388E3C; }
+    .phase-3 .phase-title { color: #1B5E20; }
+    .phase-3 .phase-layer { background: #C8E6C9; color: #1B5E20; }
+    .phase-3 .phase-priority { color: #E65100; }
+
+    /* Phase 4 - Medium-High - Purple */
+    .phase-4 .phase-card { background: #F3E5F5; }
+    .phase-4 .badge { background: #7B1FA2; }
+    .phase-4 .phase-number { color: #7B1FA2; }
+    .phase-4 .phase-title { color: #4A148C; }
+    .phase-4 .phase-layer { background: #E1BEE7; color: #4A148C; }
+    .phase-4 .phase-priority { color: #F57F17; }
+
+    /* Phase 5 - Medium-High - Orange */
+    .phase-5 .phase-card { background: #FFF3E0; }
+    .phase-5 .badge { background: #E65100; }
+    .phase-5 .phase-number { color: #E65100; }
+    .phase-5 .phase-title { color: #BF360C; }
+    .phase-5 .phase-layer { background: #FFE0B2; color: #BF360C; }
+    .phase-5 .phase-priority { color: #F57F17; }
+
+    /* Phase 6 - Medium - Red */
+    .phase-6 .phase-card { background: #FCE4EC; }
+    .phase-6 .badge { background: #C62828; }
+    .phase-6 .phase-number { color: #C62828; }
+    .phase-6 .phase-title { color: #B71C1C; }
+    .phase-6 .phase-layer { background: #FFCDD2; color: #B71C1C; }
+    .phase-6 .phase-priority { color: #F57F17; }
+
+    /* Phase 7 - Future - Gray */
+    .phase-7 .phase-card { background: #F5F5F5; border: 2px dashed #BDBDBD; box-shadow: none; }
+    .phase-7 .badge { background: #757575; }
+    .phase-7 .phase-number { color: #757575; }
+    .phase-7 .phase-title { color: #424242; }
+    .phase-7 .phase-layer { background: #E0E0E0; color: #424242; }
+    .phase-7 .phase-priority { color: #9E9E9E; }
+
+    /* Hierarchy legend */
+    .hierarchy {
+      margin-top: 36px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    .hierarchy-label {
+      font-weight: 600;
+      color: #374151;
+      margin-right: 4px;
+    }
+
+    .h-chip {
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 11px;
+    }
+
+    .h-arrow {
+      color: #9CA3AF;
+      font-size: 14px;
+    }
+
+    .h1 { background: #BBDEFB; color: #0D47A1; }
+    .h2 { background: #B2DFDB; color: #004D40; }
+    .h3 { background: #C8E6C9; color: #1B5E20; }
+    .h4 { background: #E1BEE7; color: #4A148C; }
+    .h5 { background: #FFE0B2; color: #BF360C; }
+    .h6 { background: #E0E0E0; color: #424242; }
+
+    /* Flyout */
+    #backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.25);
+      z-index: 100;
+    }
+
+    #flyout {
+      display: none;
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 380px;
+      height: 100%;
+      background: #fff;
+      box-shadow: -4px 0 24px rgba(0,0,0,0.15);
+      z-index: 101;
+      overflow-y: auto;
+      transform: translateX(100%);
+      transition: transform 0.28s ease;
+    }
+
+    #flyout.open {
+      transform: translateX(0);
+    }
+
+    .flyout-header {
+      padding: 24px 20px 16px;
+      border-bottom: 1px solid #E5E7EB;
+      position: sticky;
+      top: 0;
+      background: #fff;
+      z-index: 1;
+    }
+
+    .flyout-phase-tag {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .flyout-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 4px;
+    }
+
+    .flyout-layer-tag {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 10px;
+      border-radius: 20px;
+      margin-top: 4px;
+    }
+
+    #close-btn {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: #F3F4F6;
+      border-radius: 50%;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #374151;
+      transition: background 0.15s;
+    }
+
+    #close-btn:hover { background: #E5E7EB; }
+
+    .flyout-body {
+      padding: 20px;
+    }
+
+    .flyout-section {
+      margin-bottom: 20px;
+    }
+
+    .flyout-section h3 {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #6B7280;
+      margin-bottom: 8px;
+    }
+
+    .flyout-section p, .flyout-section li {
+      font-size: 14px;
+      color: #374151;
+      line-height: 1.6;
+    }
+
+    .flyout-section ul {
+      padding-left: 16px;
+    }
+
+    .flyout-section li {
+      margin-bottom: 4px;
+    }
+
+    .priority-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+
+    .priority-critical { background: #FEE2E2; color: #B91C1C; }
+    .priority-high { background: #FEF3C7; color: #92400E; }
+    .priority-medium-high { background: #EDE9FE; color: #5B21B6; }
+    .priority-medium { background: #F3F4F6; color: #374151; }
+    .priority-future { background: #F3F4F6; color: #9CA3AF; }
+
+    .success-item {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 13px;
+      color: #374151;
+      line-height: 1.5;
+    }
+
+    .success-item::before {
+      content: '✓';
+      color: #059669;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 480px) {
+      #flyout { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Configuration Management System</h1>
+  <p class="subtitle">Implementation Roadmap &nbsp;·&nbsp; 7 Phases &nbsp;·&nbsp; Click any phase for details</p>
+
+  <div class="diagram-wrapper">
+    <div class="diagram" id="diagram">
+
+      <!-- Phase 1 -->
+      <div class="phase phase-1" tabindex="0" role="button" aria-label="Phase 1: Global Layer" data-phase="1">
+        <div class="phase-card">
+          <div class="badge">1</div>
+          <span class="phase-icon">🌐</span>
+          <div class="phase-number">Phase 1</div>
+          <div class="phase-title">Global Layer</div>
+          <div class="phase-layer">Global</div>
+          <div class="phase-priority">CRITICAL</div>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div class="connector">
+        <svg width="36" height="24" viewBox="0 0 36 24"><line x1="0" y1="12" x2="28" y2="12" stroke="#9CA3AF" stroke-width="2"/><polygon points="28,7 36,12 28,17" fill="#9CA3AF"/></svg>
+      </div>
+
+      <!-- Phase 2 -->
+      <div class="phase phase-2" tabindex="0" role="button" aria-label="Phase 2: Model Layer" data-phase="2">
+        <div class="phase-card">
+          <div class="badge">2</div>
+          <span class="phase-icon">📱</span>
+          <div class="phase-number">Phase 2</div>
+          <div class="phase-title">Model Layer</div>
+          <div class="phase-layer">Model</div>
+          <div class="phase-priority">HIGH</div>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div class="connector">
+        <svg width="36" height="24" viewBox="0 0 36 24"><line x1="0" y1="12" x2="28" y2="12" stroke="#9CA3AF" stroke-width="2"/><polygon points="28,7 36,12 28,17" fill="#9CA3AF"/></svg>
+      </div>
+
+      <!-- Phase 3 -->
+      <div class="phase phase-3" tabindex="0" role="button" aria-label="Phase 3: Carrier Layer" data-phase="3">
+        <div class="phase-card">
+          <div class="badge">3</div>
+          <span class="phase-icon">📡</span>
+          <div class="phase-number">Phase 3</div>
+          <div class="phase-title">Carrier Layer</div>
+          <div class="phase-layer">Carrier</div>
+          <div class="phase-priority">HIGH</div>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div class="connector">
+        <svg width="36" height="24" viewBox="0 0 36 24"><line x1="0" y1="12" x2="28" y2="12" stroke="#9CA3AF" stroke-width="2"/><polygon points="28,7 36,12 28,17" fill="#9CA3AF"/></svg>
+      </div>
+
+      <!-- Phase 4 -->
+      <div class="phase phase-4" tabindex="0" role="button" aria-label="Phase 4: Service Plan Layer" data-phase="4">
+        <div class="phase-card">
+          <div class="badge">4</div>
+          <span class="phase-icon">📋</span>
+          <div class="phase-number">Phase 4</div>
+          <div class="phase-title">Service Plan Layer</div>
+          <div class="phase-layer">Service Plan</div>
+          <div class="phase-priority">MED-HIGH</div>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div class="connector">
+        <svg width="36" height="24" viewBox="0 0 36 24"><line x1="0" y1="12" x2="28" y2="12" stroke="#9CA3AF" stroke-width="2"/><polygon points="28,7 36,12 28,17" fill="#9CA3AF"/></svg>
+      </div>
+
+      <!-- Phase 5 -->
+      <div class="phase phase-5" tabindex="0" role="button" aria-label="Phase 5: Company Layer" data-phase="5">
+        <div class="phase-card">
+          <div class="badge">5</div>
+          <span class="phase-icon">🏢</span>
+          <div class="phase-number">Phase 5</div>
+          <div class="phase-title">Company Layer</div>
+          <div class="phase-layer">Company</div>
+          <div class="phase-priority">MED-HIGH</div>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div class="connector">
+        <svg width="36" height="24" viewBox="0 0 36 24"><line x1="0" y1="12" x2="28" y2="12" stroke="#9CA3AF" stroke-width="2"/><polygon points="28,7 36,12 28,17" fill="#9CA3AF"/></svg>
+      </div>
+
+      <!-- Phase 6 -->
+      <div class="phase phase-6" tabindex="0" role="button" aria-label="Phase 6: Conditional Rules Engine" data-phase="6">
+        <div class="phase-card">
+          <div class="badge">6</div>
+          <span class="phase-icon">⚙️</span>
+          <div class="phase-number">Phase 6</div>
+          <div class="phase-title">Conditional Rules</div>
+          <div class="phase-layer">Rules Engine</div>
+          <div class="phase-priority">MEDIUM</div>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div class="connector">
+        <svg width="36" height="24" viewBox="0 0 36 24"><line x1="0" y1="12" x2="28" y2="12" stroke="#BDBDBD" stroke-width="2" stroke-dasharray="4,3"/><polygon points="28,7 36,12 28,17" fill="#BDBDBD"/></svg>
+      </div>
+
+      <!-- Phase 7 -->
+      <div class="phase phase-7" tabindex="0" role="button" aria-label="Phase 7: Versioning and Workflow" data-phase="7">
+        <div class="phase-card">
+          <div class="badge">7</div>
+          <span class="phase-icon">📦</span>
+          <div class="phase-number">Phase 7</div>
+          <div class="phase-title">Versioning &amp; Workflow</div>
+          <div class="phase-layer">Future</div>
+          <div class="phase-priority">FUTURE</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Hierarchy legend -->
+  <div class="hierarchy">
+    <span class="hierarchy-label">Layer Hierarchy:</span>
+    <span class="h-chip h1">Global</span>
+    <span class="h-arrow">→</span>
+    <span class="h-chip h2">Model</span>
+    <span class="h-arrow">→</span>
+    <span class="h-chip h3">Carrier</span>
+    <span class="h-arrow">→</span>
+    <span class="h-chip h4">Service Plan</span>
+    <span class="h-arrow">→</span>
+    <span class="h-chip h5">Company</span>
+    <span class="h-arrow">→</span>
+    <span class="h-chip h6">Device</span>
+  </div>
+
+  <!-- Backdrop -->
+  <div id="backdrop"></div>
+
+  <!-- Flyout panel -->
+  <div id="flyout" role="dialog" aria-modal="true" aria-labelledby="flyout-title-el">
+    <div class="flyout-header">
+      <div class="flyout-phase-tag" id="flyout-phase-tag"></div>
+      <div class="flyout-title" id="flyout-title-el"></div>
+      <span class="flyout-layer-tag" id="flyout-layer-tag"></span>
+      <button id="close-btn" aria-label="Close panel">×</button>
+    </div>
+    <div class="flyout-body" id="flyout-body"></div>
+  </div>
+
+  <script>
+    const phases = {
+      1: {
+        label: 'Phase 1 · MVP',
+        title: 'Global Layer',
+        layer: 'Global Layer',
+        layerClass: 'h1',
+        priority: 'CRITICAL',
+        priorityClass: 'priority-critical',
+        objective: 'Eliminate the 5+ hour manual process for global configuration changes. Establish the foundation layer of the six-layer hierarchy and validate the approach with minimal risk.',
+        capabilities: [
+          'Configuration Parameter Library — centralized catalog of 600+ parameters with validation rules and layer availability matrix',
+          'Global Layer Config Interface — web-based admin UI to edit global default values with full change audit trail',
+          'Config Resolution Engine (Foundation) — six-layer hierarchy engine built for all layers; Global populates first',
+          'Device Override Preservation — existing device-specific overrides respected with no disruption to current configs',
+          'Controlled Migration — pilot with 10 devices, expand gradually, old system runs in parallel with instant rollback',
+        ],
+        success: [
+          'Admin changes global DNS in under 5 minutes (vs. 5+ hours today)',
+          'Changes propagate to 100+ devices successfully',
+          'Zero device update loops or configuration errors',
+          'Old system remains operational for unmigrated devices',
+        ],
+        resolution: 'Device → Company → Service Plan → Carrier → Model → Global',
+        note: null,
+      },
+      2: {
+        label: 'Phase 2',
+        title: 'Model Layer',
+        layer: 'Model Layer',
+        layerClass: 'h2',
+        priority: 'HIGH',
+        priorityClass: 'priority-high',
+        objective: 'Prevent model-specific configurations from being applied to wrong device types. Simplify configuration management across device models (i-22, 4100, 4500, etc.).',
+        capabilities: [
+          'Model Layer Config Interface — define defaults per device model; settings override Global defaults',
+          'Inherited Global values displayed grayed out with source label',
+          'Model-Aware Parameter Definitions — parameters marked as available at Model layer per schema',
+          'Validation ensures only model-appropriate settings are applied',
+        ],
+        success: [
+          'i-22 devices receive i-22-specific parameters only',
+          '4100 devices receive 4100-specific parameters only',
+          'Model-specific changes affect only devices of that model',
+          'Global changes still propagate to all devices correctly',
+        ],
+        resolution: 'Device → Company → Service Plan → Carrier → Model → Global',
+        note: null,
+      },
+      3: {
+        label: 'Phase 3',
+        title: 'Carrier Layer',
+        layer: 'Carrier Layer',
+        layerClass: 'h3',
+        priority: 'HIGH',
+        priorityClass: 'priority-high',
+        objective: 'Separate carrier-specific settings (APN, network parameters) into their own layer. Enable rapid carrier onboarding and carrier-wide configuration changes.',
+        capabilities: [
+          'Carrier Layer Config Interface — define configs per carrier (Verizon, AT&T, T-Mobile, etc.)',
+          'Carrier settings override Model and Global defaults',
+          'Carrier-Aware Validation — prevents carrier config mix-ups (e.g., Verizon APN on AT&T device)',
+          'New carriers can be onboarded without touching other layer configurations',
+        ],
+        success: [
+          'Verizon devices receive Verizon APN settings only',
+          'AT&T devices receive AT&T APN settings only',
+          'Carrier-specific changes affect only devices on that carrier',
+          'New carriers onboarded without touching other configurations',
+        ],
+        resolution: 'Device → Company → Service Plan → Carrier → Model → Global',
+        note: null,
+      },
+      4: {
+        label: 'Phase 4',
+        title: 'Service Plan Layer',
+        layer: 'Service Plan Layer',
+        layerClass: 'h4',
+        priority: 'MEDIUM-HIGH',
+        priorityClass: 'priority-medium-high',
+        objective: 'Isolate service plan-specific configuration into its own dedicated layer. Enable plan-based feature sets and data limit enforcement through configuration. Required foundation for Three-Way and Four-Way conditional rules in Phase 6.',
+        capabilities: [
+          'Service Plan Layer Config Interface — define configs per plan (ATM, FWA, custom tiers)',
+          'Plan settings override Carrier, Model, and Global defaults',
+          'Inherited values from lower layers displayed with source labels',
+          'Plan-Based Parameters — data limits, feature flags, traffic thresholds, plan-specific toggles',
+          'Plan Change Propagation — service plan config changes affect only devices on that plan',
+          'Contextual access to conditional rules involving this plan (added in Phase 6)',
+        ],
+        success: [
+          'ATM plan devices receive ATM-specific parameters (data limits, feature flags)',
+          'Devices on different plans receive their own plan-specific parameters independently',
+          'Service plan config changes affect only devices assigned to that plan',
+          'Changing a device\'s plan correctly picks up the new plan\'s configuration',
+          'Global, Model, and Carrier layer changes still propagate correctly through Service Plan',
+        ],
+        resolution: 'Device → Company → Service Plan → Carrier → Model → Global',
+        note: '⚠️ Required before Three-Way and Four-Way conditional rules can be implemented in Phase 6.',
+      },
+      5: {
+        label: 'Phase 5',
+        title: 'Company Layer',
+        layer: 'Company Layer',
+        layerClass: 'h5',
+        priority: 'MEDIUM-HIGH',
+        priorityClass: 'priority-medium-high',
+        objective: 'Enable company-specific configuration defaults for the full device fleet of each customer. Support portfolio-level customizations and parent/child company inheritance.',
+        capabilities: [
+          'Company Layer Config Interface — portfolio-wide settings per customer company',
+          'Company settings override Service Plan, Carrier, Model, and Global defaults',
+          'Multi-Tenant Hierarchy — parent/child company relationships with setting inheritance',
+          'Admin-managed only at this phase; customer self-service deferred to future enhancement',
+          'All six layers now fully operational',
+        ],
+        success: [
+          'Company A devices receive Company A-specific settings without affecting Company B',
+          'Child companies can inherit settings from parent company',
+          'Company-specific changes affect only devices within that company',
+          'All previous layers (1–4) continue functioning correctly',
+        ],
+        resolution: 'Device → Company → Service Plan → Carrier → Model → Global',
+        note: 'After Phase 5, the full six-layer hierarchy is operational. Phase 6 introduces conditional rules that override this hierarchy at specific priority levels.',
+      },
+      6: {
+        label: 'Phase 6',
+        title: 'Conditional Rules Engine',
+        layer: 'Rules Engine',
+        layerClass: 'h6',
+        priority: 'MEDIUM',
+        priorityClass: 'priority-medium',
+        objective: 'Handle complex configuration logic where values depend on multiple device attributes simultaneously. Implement the complete 11-level priority hierarchy with Two-Way, Three-Way, and Four-Way conditional rules.',
+        capabilities: [
+          'Two-Way Rules (6 combinations): Carrier+Plan, Model+Plan, Model+Carrier, Carrier+Company, Model+Company, Plan+Company',
+          'Three-Way Rules: Model + Carrier + Service Plan combinations',
+          'Four-Way Rules: Model + Carrier + Service Plan + Company (customer-specific exceptions)',
+          'Rule Management Interface — create, test, and deploy rules through admin UI',
+          'Conflict detection and resolution built in',
+          'Full 11-Level Priority Hierarchy activated',
+        ],
+        success: [
+          'Two-Way, Three-Way, and Four-Way rules execute correctly during config generation',
+          'Complex multi-factor scenarios handled automatically',
+          'No rule conflicts or ambiguous outcomes',
+          'Rules can be tested safely before production use',
+          'All previous phase behaviors continue correctly',
+        ],
+        resolution: 'L1: Device | L2: Four-Way Rule | L3: Company | L4: Three-Way Rule | L5: Service Plan | L6: Two-Way Rules (6.1–6.6) | L7: Carrier | L8: Model | L9: Global | L10: Static | L11: NULL',
+        note: '⚠️ Most complex milestone. May be sub-phased: Two-Way rules first, then Three-Way + Four-Way.',
+      },
+      7: {
+        label: 'Phase 7 · Future',
+        title: 'Versioning & Workflow',
+        layer: 'Future Enhancement',
+        layerClass: 'h6',
+        priority: 'FUTURE',
+        priorityClass: 'priority-future',
+        objective: 'Enterprise-grade change management for configuration updates. Draft, review, and approve workflow before changes are published to the device fleet.',
+        capabilities: [
+          'Configuration Versioning — save changes as drafts, review before publishing',
+          'Rollback to previous configuration versions at any layer',
+          'Change Approval Workflow — multi-level approval process with full audit trail',
+          'Scheduled change deployment',
+          'Automated validation and gradual rollout with monitoring',
+        ],
+        success: [
+          'Config changes can be staged as drafts before affecting devices',
+          'Multi-level approval process enforced before publishing',
+          'Complete change history and audit trail maintained',
+          'Gradual rollout with monitoring and rollback capability',
+        ],
+        resolution: 'N/A — governance layer on top of the full six-layer hierarchy',
+        note: 'Future-scoped. Will be detailed after Phases 1–6 are complete.',
+      },
+    };
+
+    const flyout = document.getElementById('flyout');
+    const backdrop = document.getElementById('backdrop');
+    const closeBtn = document.getElementById('close-btn');
+    let activePhase = null;
+
+    function openFlyout(phaseId) {
+      const data = phases[phaseId];
+      if (!data) return;
+
+      // Remove active from previous
+      if (activePhase) {
+        document.querySelector(`[data-phase="${activePhase}"]`)?.classList.remove('active');
+      }
+      activePhase = phaseId;
+      document.querySelector(`[data-phase="${phaseId}"]`)?.classList.add('active');
+
+      // Populate header
+      document.getElementById('flyout-phase-tag').textContent = data.label;
+      document.getElementById('flyout-phase-tag').style.color = '#6B7280';
+      document.getElementById('flyout-title-el').textContent = data.title;
+
+      const layerTag = document.getElementById('flyout-layer-tag');
+      layerTag.textContent = data.layer;
+      layerTag.className = `flyout-layer-tag h-chip ${data.layerClass}`;
+
+      // Build body
+      let html = `<span class="priority-badge ${data.priorityClass}">${data.priority}</span>`;
+
+      html += `<div class="flyout-section"><h3>Objective</h3><p>${data.objective}</p></div>`;
+
+      html += `<div class="flyout-section"><h3>Capabilities Delivered</h3><ul>`;
+      data.capabilities.forEach(c => { html += `<li>${c}</li>`; });
+      html += `</ul></div>`;
+
+      html += `<div class="flyout-section"><h3>Success Criteria</h3>`;
+      data.success.forEach(s => { html += `<div class="success-item">${s}</div>`; });
+      html += `</div>`;
+
+      html += `<div class="flyout-section"><h3>Resolution Order</h3><p style="font-family: monospace; font-size: 12px; line-height: 1.7; color: #374151;">${data.resolution}</p></div>`;
+
+      if (data.note) {
+        html += `<div class="flyout-section" style="background: #FFFBEB; border-left: 3px solid #F59E0B; padding: 12px; border-radius: 4px;"><p style="font-size: 13px; color: #92400E;">${data.note}</p></div>`;
+      }
+
+      document.getElementById('flyout-body').innerHTML = html;
+
+      // Show
+      flyout.style.display = 'block';
+      backdrop.style.display = 'block';
+      requestAnimationFrame(() => { flyout.classList.add('open'); });
+    }
+
+    function closeFlyout() {
+      flyout.classList.remove('open');
+      backdrop.style.display = 'none';
+      if (activePhase) {
+        document.querySelector(`[data-phase="${activePhase}"]`)?.classList.remove('active');
+        activePhase = null;
+      }
+      setTimeout(() => { flyout.style.display = 'none'; }, 280);
+    }
+
+    // Attach click handlers to all phases
+    document.querySelectorAll('.phase').forEach(el => {
+      el.addEventListener('click', () => openFlyout(parseInt(el.dataset.phase)));
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openFlyout(parseInt(el.dataset.phase));
+        }
+      });
+    });
+
+    closeBtn.addEventListener('click', closeFlyout);
+    backdrop.addEventListener('click', closeFlyout);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeFlyout(); });
+  </script>
+</body>
+</html>

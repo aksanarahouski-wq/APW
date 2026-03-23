@@ -1,0 +1,1 @@
+We would like an additional device status called “Admin Deactivated” which cannot be modified by any customer.
