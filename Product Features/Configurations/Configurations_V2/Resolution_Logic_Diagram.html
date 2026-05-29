@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuration Engine V2 — Resolution Logic</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #f8f9fa;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+
+    .page-header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #fff;
+      padding: 32px 40px;
+      text-align: center;
+    }
+
+    .page-header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .page-header p {
+      font-size: 15px;
+      color: #a0aec0;
+      max-width: 700px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+
+    .legend-bar {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding: 16px 24px;
+      background: #fff;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #4a5568;
+    }
+
+    .legend-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+    }
+
+    .legend-dot.schema { background: #90a4ae; }
+    .legend-dot.model { background: #42a5f5; }
+    .legend-dot.rule { background: #66bb6a; }
+    .legend-dot.company { background: #ffa726; }
+    .legend-dot.device { background: #ab47bc; }
+    .legend-dot.decision { background: #fff9c4; border: 2px solid #f9a825; }
+    .legend-dot.result { background: #e8f5e9; border: 2px solid #2e7d32; }
+    .legend-dot.error { background: #ffebee; border: 2px solid #c62828; }
+
+    .diagram-container {
+      display: flex;
+      justify-content: center;
+      padding: 40px 24px;
+      overflow-x: auto;
+    }
+
+    .diagram-container .mermaid {
+      max-width: 1000px;
+      width: 100%;
+    }
+
+    .diagram-container .mermaid svg {
+      cursor: default;
+    }
+
+    /* Make nodes clickable */
+    .diagram-container .mermaid .node { cursor: pointer; }
+    .diagram-container .mermaid .node:hover rect,
+    .diagram-container .mermaid .node:hover polygon,
+    .diagram-container .mermaid .node:hover .label-container {
+      filter: brightness(0.92);
+    }
+
+    /* Flyout panel */
+    .backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.3);
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 250ms ease;
+    }
+
+    .backdrop.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .flyout {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 440px;
+      max-width: 100%;
+      height: 100vh;
+      background: #fff;
+      box-shadow: -4px 0 24px rgba(0,0,0,0.15);
+      z-index: 200;
+      transform: translateX(100%);
+      transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .flyout.open { transform: translateX(0); }
+
+    .flyout-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 24px 24px 16px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .flyout-header h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1a1a2e;
+      line-height: 1.3;
+    }
+
+    .flyout-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 12px;
+      margin-top: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .flyout-close {
+      background: none;
+      border: none;
+      font-size: 28px;
+      cursor: pointer;
+      color: #718096;
+      padding: 0 4px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .flyout-close:hover { color: #1a1a2e; }
+
+    .flyout-body {
+      padding: 24px;
+      overflow-y: auto;
+      flex: 1;
+      font-size: 14px;
+      line-height: 1.7;
+      color: #2d3748;
+    }
+
+    .flyout-body h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin: 16px 0 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .flyout-body h3:first-child { margin-top: 0; }
+
+    .flyout-body ul {
+      padding-left: 20px;
+      margin: 4px 0 12px;
+    }
+
+    .flyout-body ul li { margin-bottom: 4px; }
+
+    .flyout-body code {
+      background: #edf2f7;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 13px;
+      color: #e53e3e;
+    }
+
+    .flyout-body .example-box {
+      background: #f7fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 14px;
+      margin: 10px 0;
+      font-size: 13px;
+      font-family: 'SF Mono', SFMono-Regular, Consolas, monospace;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    .flyout-body .source-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin: 0 2px;
+    }
+
+    .badge-schema  { background: #eceff1; color: #546e7a; }
+    .badge-model   { background: #e3f2fd; color: #1565c0; }
+    .badge-rule    { background: #e8f5e9; color: #2e7d32; }
+    .badge-company { background: #fff3e0; color: #e65100; }
+    .badge-device  { background: #f3e5f5; color: #7b1fa2; }
+    .badge-error   { background: #ffebee; color: #c62828; }
+    .badge-result  { background: #e8f5e9; color: #1b5e20; }
+
+    .instructions {
+      text-align: center;
+      padding: 12px;
+      font-size: 13px;
+      color: #718096;
+      background: #fff;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    @media (max-width: 600px) {
+      .flyout { width: 100%; }
+      .page-header { padding: 20px 16px; }
+      .page-header h1 { font-size: 22px; }
+      .legend-bar { gap: 10px; padding: 12px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="page-header">
+    <h1>Configuration Engine V2 — Resolution Logic</h1>
+    <p>How the system compiles the final configuration for a device by walking through 5 hierarchy levels. Click any step to see details.</p>
+  </div>
+
+  <div class="legend-bar">
+    <div class="legend-item"><div class="legend-dot schema"></div>Schema Default</div>
+    <div class="legend-item"><div class="legend-dot model"></div>Model Default</div>
+    <div class="legend-item"><div class="legend-dot rule"></div>3-Way Rule</div>
+    <div class="legend-item"><div class="legend-dot company"></div>Company Override</div>
+    <div class="legend-item"><div class="legend-dot device"></div>Device Override</div>
+    <div class="legend-item"><div class="legend-dot decision"></div>Decision</div>
+    <div class="legend-item"><div class="legend-dot result"></div>Final Result</div>
+    <div class="legend-item"><div class="legend-dot error"></div>Error</div>
+  </div>
+
+  <div class="diagram-container">
+    <div class="mermaid">
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'fontSize': '14px',
+    'fontFamily': '-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif',
+    'primaryColor': '#e3f2fd',
+    'primaryTextColor': '#1a1a2e',
+    'primaryBorderColor': '#90caf9',
+    'lineColor': '#78909c',
+    'secondaryColor': '#fff9c4',
+    'tertiaryColor': '#f3e5f5'
+  }
+}}%%
+flowchart TD
+    START(["① Start Resolution<br/><i>For each parameter in the<br/>device's model parameter list</i>"])
+    SCHEMA["② Check Schema Default<br/><i>Grand Schema default value</i>"]
+    HAS_SCHEMA{③ Schema default<br/>exists?}
+    SET_SCHEMA["④ Use Schema Default"]
+    NO_DEFAULT["⑤ No value yet<br/><i>Parameter starts as null</i>"]
+    MODEL["⑥ Check Model Default<br/><i>Model-level default for this parameter</i>"]
+    HAS_MODEL{⑦ Model default<br/>exists?}
+    SET_MODEL["⑧ Override → Model Default"]
+    RULE["⑨ Check 3-Way Rule<br/><i>Model + Carrier + Service Plan value</i>"]
+    HAS_RULE{⑩ 3-Way Rule<br/>value exists?}
+    SET_RULE["⑪ Override → 3-Way Rule"]
+    COMPANY["⑫ Check Company Override<br/><i>Override set assigned to device's company?</i>"]
+    HAS_COMPANY{⑬ Company override<br/>value exists?}
+    SET_COMPANY["⑭ Override → Company Override"]
+    DEVICE["⑮ Check Device Override<br/><i>Device-level parameter override</i>"]
+    HAS_DEVICE{⑯ Device override<br/>exists?}
+    SET_DEVICE["⑰ Override → Device Override"]
+    FINAL["⑱ Final Compiled Value<br/><i>Parameter resolution complete</i>"]
+    REQUIRED{⑲ Parameter<br/>required?}
+    MISSING["⑳ CONFIG ERROR<br/><i>Required parameter has no value</i>"]
+    VALID(["✓ Value Resolved<br/><i>Move to next parameter</i>"])
+    NULL_CHECK{Value is<br/>null?}
+
+    START --> SCHEMA
+    SCHEMA --> HAS_SCHEMA
+    HAS_SCHEMA -- Yes --> SET_SCHEMA
+    HAS_SCHEMA -- No --> NO_DEFAULT
+    SET_SCHEMA --> MODEL
+    NO_DEFAULT --> MODEL
+    MODEL --> HAS_MODEL
+    HAS_MODEL -- Yes --> SET_MODEL
+    HAS_MODEL -- No --> RULE
+    SET_MODEL --> RULE
+    RULE --> HAS_RULE
+    HAS_RULE -- Yes --> SET_RULE
+    HAS_RULE -- No --> COMPANY
+    SET_RULE --> COMPANY
+    COMPANY --> HAS_COMPANY
+    HAS_COMPANY -- Yes --> SET_COMPANY
+    HAS_COMPANY -- No --> DEVICE
+    SET_COMPANY --> DEVICE
+    DEVICE --> HAS_DEVICE
+    HAS_DEVICE -- Yes --> SET_DEVICE
+    HAS_DEVICE -- No --> FINAL
+    SET_DEVICE --> FINAL
+    FINAL --> NULL_CHECK
+    NULL_CHECK -- No --> VALID
+    NULL_CHECK -- Yes --> REQUIRED
+    REQUIRED -- Yes --> MISSING
+    REQUIRED -- No --> VALID
+
+    style START fill:#e8eaf6,stroke:#5c6bc0,stroke-width:2px,color:#1a237e
+    style SCHEMA fill:#eceff1,stroke:#90a4ae,stroke-width:2px,color:#37474f
+    style SET_SCHEMA fill:#eceff1,stroke:#90a4ae,stroke-width:2px,color:#37474f
+    style NO_DEFAULT fill:#fafafa,stroke:#bdbdbd,stroke-width:1px,color:#757575
+    style MODEL fill:#e3f2fd,stroke:#42a5f5,stroke-width:2px,color:#0d47a1
+    style SET_MODEL fill:#e3f2fd,stroke:#42a5f5,stroke-width:2px,color:#0d47a1
+    style RULE fill:#e8f5e9,stroke:#66bb6a,stroke-width:2px,color:#1b5e20
+    style SET_RULE fill:#e8f5e9,stroke:#66bb6a,stroke-width:2px,color:#1b5e20
+    style COMPANY fill:#fff3e0,stroke:#ffa726,stroke-width:2px,color:#e65100
+    style SET_COMPANY fill:#fff3e0,stroke:#ffa726,stroke-width:2px,color:#e65100
+    style DEVICE fill:#f3e5f5,stroke:#ab47bc,stroke-width:2px,color:#4a148c
+    style SET_DEVICE fill:#f3e5f5,stroke:#ab47bc,stroke-width:2px,color:#4a148c
+    style FINAL fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#1b5e20
+    style VALID fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#1b5e20
+    style MISSING fill:#ffebee,stroke:#c62828,stroke-width:2px,color:#b71c1c
+    style HAS_SCHEMA fill:#fff9c4,stroke:#f9a825,stroke-width:2px,color:#f57f17
+    style HAS_MODEL fill:#fff9c4,stroke:#f9a825,stroke-width:2px,color:#f57f17
+    style HAS_RULE fill:#fff9c4,stroke:#f9a825,stroke-width:2px,color:#f57f17
+    style HAS_COMPANY fill:#fff9c4,stroke:#f9a825,stroke-width:2px,color:#f57f17
+    style HAS_DEVICE fill:#fff9c4,stroke:#f9a825,stroke-width:2px,color:#f57f17
+    style REQUIRED fill:#fff9c4,stroke:#f9a825,stroke-width:2px,color:#f57f17
+    style NULL_CHECK fill:#fff9c4,stroke:#f9a825,stroke-width:2px,color:#f57f17
+    </div>
+  </div>
+
+  <div class="instructions">Click any step in the diagram to see detailed information about that stage of the resolution process.</div>
+
+  <div class="backdrop" id="backdrop"></div>
+
+  <div class="flyout" id="flyout">
+    <div class="flyout-header">
+      <div>
+        <h2 id="flyout-title"></h2>
+        <div id="flyout-badge-container"></div>
+      </div>
+      <button class="flyout-close" id="flyout-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="flyout-body" id="flyout-body"></div>
+  </div>
+
+  <script>
+    const stepData = {
+      'START': {
+        title: '① Start Resolution',
+        badge: '<span class="flyout-badge" style="background:#e8eaf6;color:#1a237e;">Entry Point</span>',
+        body: `
+          <h3>What Happens</h3>
+          <p>The resolution engine iterates through <strong>every parameter</strong> in the device's model parameter list and resolves each one individually by walking down the 5-level hierarchy.</p>
+          <h3>Inputs Required</h3>
+          <ul>
+            <li>The <strong>device record</strong> — identifies the model, carrier, service plan, and company</li>
+            <li>The <strong>model's selected parameter list</strong> — determines which of the ~697 schema parameters are relevant for this device</li>
+          </ul>
+          <h3>How It Works</h3>
+          <p>For each parameter, the system starts with no value and checks each hierarchy level in order. The first level to provide a value becomes the baseline; each subsequent level can override it. The last level to set a value wins.</p>
+          <div class="example-box">For each parameter in device.model.selectedParameters:
+  → Walk levels 1-5
+  → Record final value + source layer
+  → Flag errors if required and null</div>
+        `
+      },
+      'SCHEMA': {
+        title: '② Check Schema Default',
+        badge: '<span class="flyout-badge badge-schema">Level 1 — Schema</span>',
+        body: `
+          <h3>What Happens</h3>
+          <p>Look up the parameter in the <strong>Grand Schema</strong> and check if it has a default value defined.</p>
+          <h3>The Grand Schema</h3>
+          <p>The schema is the single source of truth for all ~697 configuration parameters. Each parameter entry includes metadata (name, type, category, validation) and an optional <code>default_value</code>.</p>
+          <h3>Key Points</h3>
+          <ul>
+            <li>Schema defaults apply <strong>system-wide</strong> as the baseline for all devices, all models, all carriers</li>
+            <li>Not every parameter has a schema default — some are intentionally null, meaning they must be set at a lower level</li>
+            <li>This level replaces the concept of a "global configuration layer" from V1</li>
+          </ul>
+          <div class="example-box">wan0_proto → schema default: "dhcp"
+wl0_ssid   → schema default: "WATM-Default"
+fw_table_1 → schema default: "" (empty string)
+cell_apn   → schema default: null (no default)</div>
+        `
+      },
+      'HAS_SCHEMA': {
+        title: '③ Schema Default Exists?',
+        badge: '<span class="flyout-badge" style="background:#fff9c4;color:#f57f17;">Decision</span>',
+        body: `
+          <h3>Decision</h3>
+          <p>Does the Grand Schema have a non-null <code>default_value</code> for this parameter?</p>
+          <h3>Outcomes</h3>
+          <ul>
+            <li><strong>Yes →</strong> Use the schema default as the starting value. Most parameters (~400+) will have a schema default.</li>
+            <li><strong>No →</strong> The parameter starts with no value. It must be set at a lower level or it will remain null.</li>
+          </ul>
+        `
+      },
+      'SET_SCHEMA': {
+        title: '④ Use Schema Default',
+        badge: '<span class="flyout-badge badge-schema">Level 1 — Schema</span>',
+        body: `
+          <h3>What Happens</h3>
+          <p>The parameter's current resolved value is set to the schema default. The source is recorded as <span class="source-badge badge-schema">Schema Default</span>.</p>
+          <h3>In the Preview</h3>
+          <p>Parameters at this level appear with a <strong>gray badge</strong> in the configuration preview. This is the most common source — the bulk of a device's configuration comes from schema defaults.</p>
+        `
+      },
+      'NO_DEFAULT': {
+        title: '⑤ No Value Yet',
+        badge: '<span class="flyout-badge" style="background:#fafafa;color:#757575;border:1px solid #bdbdbd;">Null</span>',
+        body: `
+          <h3>What Happens</h3>
+          <p>The parameter has no schema default. Its value is currently <code>null</code>. The system continues checking lower levels to see if any of them provide a value.</p>
+          <h3>Why Some Parameters Have No Default</h3>
+          <ul>
+            <li>Parameters like <code>cell_apn</code> are carrier-specific — there's no universal default</li>
+            <li>Parameters like <code>wl0_password</code> are security-sensitive — no default makes sense</li>
+            <li>Custom parameters that are always set per-model or per-rule</li>
+          </ul>
+        `
+      },
+      'MODEL': {
+        title: '⑥ Check Model Default',
+        badge: '<span class="flyout-badge badge-model">Level 2 — Model</span>',
+        body: `
+          <h3>What Happens</h3>
+          <p>Look up the parameter in the <strong>Model Configuration</strong> for this device's model and check if a model-level default is set.</p>
+          <h3>Why Model Defaults Exist</h3>
+          <p>Some parameters are model-specific but constant across all carrier/service plan combinations. Setting them here avoids repeating the same value in every 3-Way Rule.</p>
+          <div class="example-box">I-22 model defaults:
+  io_enable = 1      (always on for I-22)
+  io_port_count = 4  (hardware constant)
+  mon_heartbeat = 30 (model-specific interval)</div>
+          <h3>Key Points</h3>
+          <ul>
+            <li>Only parameters in the model's <strong>selected parameter list</strong> can have model defaults</li>
+            <li>Model defaults override schema defaults</li>
+            <li>Not every selected parameter needs a model default — only set values that should be constant for this model</li>
+          </ul>
+        `
+      },
+      'HAS_MODEL': {
+        title: '⑦ Model Default Exists?',
+        badge: '<span class="flyout-badge" style="background:#fff9c4;color:#f57f17;">Decision</span>',
+        body: `
+          <h3>Decision</h3>
+          <p>Does the Model Configuration for this device's model have a default value set for this parameter?</p>
+          <h3>Outcomes</h3>
+          <ul>
+            <li><strong>Yes →</strong> Override the current value with the model default. Typically ~50 parameters per model have model defaults.</li>
+            <li><strong>No →</strong> Keep the current value (schema default or null) and continue to the next level.</li>
+          </ul>
+        `
+      },
+      'SET_MODEL': {
+        title: '⑧ Override → Model Default',
+        badge: '<span class="flyout-badge badge-model">Level 2 — Model</span>',
+        body: `
+          <h3>What Happens</h3>
+          <p>The parameter's resolved value is overridden with the model default. The source is updated to <span class="source-badge badge-model">Model Default</span>.</p>
+          <p>This value will be used unless a 3-Way Rule, Company Override, or Device Override sets a different value at a lower level.</p>
+        `
+      },
+      'RULE': {
+        title: '⑨ Check 3-Way Rule',
+        badge: '<span class="flyout-badge badge-rule">Level 3 — 3-Way Rule</span>',
+        body: `
+          <h3>What Happens</h3>
+          <p>Look up the <strong>3-Way Rule</strong> that matches this device's <strong>Model + Carrier + Service Plan</strong> combination and check if it has a value for this parameter.</p>
+          <h3>How the Rule Is Found</h3>
+          <p>The system matches the device's model, carrier, and service plan against existing 3-Way Rules. A rule can cover multiple service plans (e.g., I-22 + Verizon + [ATM, Standard]).</p>
+          <div class="example-box">Device: ATM-VZW-001
+  Model: I-22
+  Carrier: Verizon
+  Service Plan: ATM
+  → Matches rule: I-22 + Verizon + [ATM, Standard]</div>
+          <h3>Key Points</h3>
+          <ul>
+            <li>This is where carrier-specific and service-plan-specific values are set</li>
+            <li>Only parameters in the model's selected parameter list appear in 3-Way Rules</li>
+            <li>Typically ~40 parameters are configured per 3-Way Rule</li>
+          </ul>
+        `
+      },
+      'HAS_RULE': {
+        title: '⑩ 3-Way Rule Value Exists?',
+        badge: '<span class="flyout-badge" style="background:#fff9c4;color:#f57f17;">Decision</span>',
+        body: `
+          <h3>Decision</h3>
+          <p>Does the matched 3-Way Rule have a value set for this parameter?</p>
+          <h3>Outcomes</h3>
+          <ul>
+            <li><strong>Yes →</strong> Override the current value with the 3-Way Rule value. This means the parameter is carrier/service-plan specific.</li>
+            <li><strong>No →</strong> Keep the current value (model default, schema default, or null) and continue.</li>
+          </ul>
+        `
+      },
+      'SET_RULE': {
+        title: '⑪ Override → 3-Way Rule',
+        badge: '<span class="flyout-badge badge-rule">Level 3 — 3-Way Rule</span>',
+        body: `
+          <h3>What Happens</h3>
+          <p>The parameter's resolved value is overridden with the 3-Way Rule value. The source is updated to <span class="source-badge badge-rule">3-Way Rule</span>.</p>
+          <div class="example-box">wan0_proto:
+  Schema Default: "dhcp"
+  Model Default:  —
+  3-Way Rule:     "static"  ← overrides schema default
+  → Current value: "static" (source: 3-Way Rule)</div>
+        `
+      },
+      'COMPANY': {
+        title: '⑫ Check Company Override',
+        badge: '<span class="flyout-badge badge-company">Level 4 — Company Override</span>',
+        body: `
+          <h3>What Happens</h3>
+          <p>Find <strong>all override sets</strong> assigned to the device's company (or inherited from its parent company) whose scope matches this device, and check if any of them have a value for this parameter.</p>
+          <h3>Override Set Matching</h3>
+          <p>Each override set defines its own scope using three selectors — Model, Carrier, and Service Plan — each of which can be a specific value or <strong>"Any"</strong>. The system finds all sets where:</p>
+          <ol>
+            <li>Override set model = device's model <strong>OR</strong> "Any"</li>
+            <li>Override set carrier = device's carrier <strong>OR</strong> "Any"</li>
+            <li>Override set service plan includes device's service plan <strong>OR</strong> "Any"</li>
+          </ol>
+          <div class="example-box">Device: ATM-VZW-001 (I-22, Verizon, ATM)
+  Company: Cord Financial
+
+  Matching override sets:
+    "Cord Firewall"     — Any + Any + Any    → fw_acl, fw_enable
+    "I-22 Power Config" — I-22 + Any + Any   → io_enable
+  Non-matching:
+    "TMO DNS Config"    — Any + T-Mobile + Any  (wrong carrier)</div>
+          <h3>Key Points</h3>
+          <ul>
+            <li><strong>Multiple override sets</strong> can match one device, but conflict detection at assignment time guarantees no two sets provide the same parameter for overlapping scopes</li>
+            <li>For any given parameter, <strong>at most one override set</strong> will have a value — there is no ambiguity</li>
+            <li>Override sets are <strong>reusable</strong> — the same set can be assigned to multiple companies</li>
+            <li>Sub-companies inherit from parent by default but can be unlinked</li>
+          </ul>
+        `
+      },
+      'HAS_COMPANY': {
+        title: '⑬ Company Override Value Exists?',
+        badge: '<span class="flyout-badge" style="background:#fff9c4;color:#f57f17;">Decision</span>',
+        body: `
+          <h3>Decision</h3>
+          <p>Do any of the matching override sets (those whose scope matches this device's model, carrier, and service plan) have a value for this parameter?</p>
+          <h3>Outcomes</h3>
+          <ul>
+            <li><strong>Yes →</strong> Exactly one matching override set has a value for this parameter (guaranteed by conflict detection). Override the current value with it.</li>
+            <li><strong>No →</strong> No matching override set provides this parameter. Keep the current value and continue to the device level. This is the case for most parameters — company overrides are selective.</li>
+          </ul>
+        `
+      },
+      'SET_COMPANY': {
+        title: '⑭ Override → Company Override',
+        badge: '<span class="flyout-badge badge-company">Level 4 — Company Override</span>',
+        body: `
+          <h3>What Happens</h3>
+          <p>The parameter's resolved value is overridden with the value from the matching override set. The source is updated to <span class="source-badge badge-company">Company Override</span>. Because conflict detection prevents parameter overlap across override sets for the same device scope, this value is unambiguous — exactly one set provides it.</p>
+          <div class="example-box">fw_acl:
+  Schema Default:    null
+  3-Way Rule:        "default_rules"
+  Company Override:  "cord_rules"  ← from "Cord Firewall" (Any+Any+Any)
+  → Current value: "cord_rules" (source: Company Override)</div>
+        `
+      },
+      'DEVICE': {
+        title: '⑮ Check Device Override',
+        badge: '<span class="flyout-badge badge-device">Level 5 — Device Override</span>',
+        body: `
+          <h3>What Happens</h3>
+          <p>Check if the <strong>individual device</strong> has an override value for this parameter. Device overrides are the final and highest-priority level.</p>
+          <h3>Key Points</h3>
+          <ul>
+            <li>Only parameters with <code>available_at_device = true</code> in the schema can be overridden here</li>
+            <li>Limited scope — primarily customer-facing settings (Wi-Fi SSID, password, cellular settings)</li>
+            <li>Customers can modify these themselves through the portal</li>
+            <li>Most parameters (~690 of 697) are NOT available at this level</li>
+          </ul>
+        `
+      },
+      'HAS_DEVICE': {
+        title: '⑯ Device Override Exists?',
+        badge: '<span class="flyout-badge" style="background:#fff9c4;color:#f57f17;">Decision</span>',
+        body: `
+          <h3>Decision</h3>
+          <p>Does the device have an override value for this parameter?</p>
+          <h3>Outcomes</h3>
+          <ul>
+            <li><strong>Yes →</strong> Override the current value with the device-specific value. This is the final override — nothing can override it. Typically ~5 parameters per device.</li>
+            <li><strong>No →</strong> Keep the current value from whichever level last set it. Proceed to final compilation.</li>
+          </ul>
+        `
+      },
+      'SET_DEVICE': {
+        title: '⑰ Override → Device Override',
+        badge: '<span class="flyout-badge badge-device">Level 5 — Device Override</span>',
+        body: `
+          <h3>What Happens</h3>
+          <p>The parameter's resolved value is overridden with the device-specific value. The source is updated to <span class="source-badge badge-device">Device Override</span>. This is the <strong>highest priority</strong> — no other level can override it.</p>
+          <div class="example-box">wl0_ssid:
+  Schema Default:    "WATM-Default"
+  3-Way Rule:        "WATM-ATM"
+  Company Override:  "CordFinancial"
+  Device Override:   "CordATM-FL01"  ← device-specific
+  → Final value: "CordATM-FL01" (source: Device Override)</div>
+        `
+      },
+      'FINAL': {
+        title: '⑱ Final Compiled Value',
+        badge: '<span class="flyout-badge badge-result">Resolution Complete</span>',
+        body: `
+          <h3>What Happens</h3>
+          <p>All 5 hierarchy levels have been checked. The parameter now has its final resolved value (or null if no level provided a value).</p>
+          <h3>What's Recorded</h3>
+          <ul>
+            <li><strong>Final value</strong> — the compiled result to push to the device</li>
+            <li><strong>Source layer</strong> — which level provided the value (for the preview badge color)</li>
+            <li><strong>Full resolution chain</strong> — every layer's value for audit/debugging</li>
+          </ul>
+          <h3>Typical Distribution (per device)</h3>
+          <div class="example-box">~400 parameters → Schema Default  (gray)
+~50  parameters → Model Default   (blue)
+~40  parameters → 3-Way Rule      (green)
+~8   parameters → Company Override (orange)
+~5   parameters → Device Override  (purple)
+~2   parameters → Missing/Error   (red)</div>
+        `
+      },
+      'NULL_CHECK': {
+        title: 'Value Is Null?',
+        badge: '<span class="flyout-badge" style="background:#fff9c4;color:#f57f17;">Decision</span>',
+        body: `
+          <h3>Decision</h3>
+          <p>After checking all 5 levels, is the parameter's final value still <code>null</code> (no level provided a value)?</p>
+          <h3>Outcomes</h3>
+          <ul>
+            <li><strong>No (has a value) →</strong> Resolution is complete. The parameter is valid.</li>
+            <li><strong>Yes (still null) →</strong> Check if this parameter is marked as required in the schema. A null value may or may not be an error.</li>
+          </ul>
+        `
+      },
+      'REQUIRED': {
+        title: '⑲ Parameter Required?',
+        badge: '<span class="flyout-badge" style="background:#fff9c4;color:#f57f17;">Decision</span>',
+        body: `
+          <h3>Decision</h3>
+          <p>Is this parameter marked as <code>is_required = true</code> in the Grand Schema?</p>
+          <h3>Outcomes</h3>
+          <ul>
+            <li><strong>Yes →</strong> This is a configuration error. A required parameter has no value at any level. Flagged as <span class="source-badge badge-error">MISSING</span> in the preview.</li>
+            <li><strong>No →</strong> A null value is acceptable for optional parameters. The parameter is simply not set — this is valid.</li>
+          </ul>
+        `
+      },
+      'MISSING': {
+        title: '⑳ Configuration Error',
+        badge: '<span class="flyout-badge badge-error">Error</span>',
+        body: `
+          <h3>What Happens</h3>
+          <p>A <strong>required parameter</strong> has no value after checking all 5 hierarchy levels. This is flagged as a configuration error.</p>
+          <h3>How It's Displayed</h3>
+          <p>In the configuration preview, this parameter shows a red <span class="source-badge badge-error">MISSING</span> badge. It's included in the "Missing (required)" count in the summary stats.</p>
+          <h3>When This Happens</h3>
+          <ul>
+            <li>A new required parameter was added to the schema but hasn't been configured in any 3-Way Rule yet</li>
+            <li>A model was configured for a new carrier/service plan combination but required values weren't filled in</li>
+            <li>A parameter was made required after existing rules were created</li>
+          </ul>
+          <h3>Resolution</h3>
+          <p>An admin needs to set a value at any level: schema default, model default, 3-Way Rule, company override, or device override. The system warns but does not block saving — the error can be caught during review.</p>
+        `
+      },
+      'VALID': {
+        title: '✓ Value Resolved',
+        badge: '<span class="flyout-badge badge-result">Complete</span>',
+        body: `
+          <h3>What Happens</h3>
+          <p>This parameter's resolution is complete. The system moves to the <strong>next parameter</strong> in the model's selected parameter list and repeats the entire 5-level resolution process.</p>
+          <h3>After All Parameters Are Resolved</h3>
+          <p>The complete compiled configuration is assembled — all ~697 parameters with their final values and source layers. This is what gets:</p>
+          <ul>
+            <li>Displayed in the <strong>Configuration Preview</strong> (with color-coded source badges)</li>
+            <li>Exported as a <strong>key-value file</strong> (for comparison with legacy .DAT files)</li>
+            <li>Pushed to the <strong>device</strong> as its active configuration</li>
+          </ul>
+        `
+      }
+    };
+
+    // Initialize Mermaid
+    mermaid.initialize({
+      startOnLoad: true,
+      securityLevel: 'loose',
+      flowchart: {
+        useMaxWidth: true,
+        htmlLabels: true,
+        curve: 'basis',
+        padding: 16,
+        nodeSpacing: 30,
+        rankSpacing: 40
+      }
+    });
+
+    // Wait for Mermaid to render, then attach click handlers
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        const nodes = document.querySelectorAll('.node');
+        nodes.forEach(node => {
+          node.addEventListener('click', (e) => {
+            const nodeId = node.id.split('-').pop();
+            // Map Mermaid node IDs to our data keys
+            const idMap = {
+              'START': 'START', 'SCHEMA': 'SCHEMA', 'HAS_SCHEMA': 'HAS_SCHEMA',
+              'SET_SCHEMA': 'SET_SCHEMA', 'NO_DEFAULT': 'NO_DEFAULT',
+              'MODEL': 'MODEL', 'HAS_MODEL': 'HAS_MODEL', 'SET_MODEL': 'SET_MODEL',
+              'RULE': 'RULE', 'HAS_RULE': 'HAS_RULE', 'SET_RULE': 'SET_RULE',
+              'COMPANY': 'COMPANY', 'HAS_COMPANY': 'HAS_COMPANY', 'SET_COMPANY': 'SET_COMPANY',
+              'DEVICE': 'DEVICE', 'HAS_DEVICE': 'HAS_DEVICE', 'SET_DEVICE': 'SET_DEVICE',
+              'FINAL': 'FINAL', 'NULL_CHECK': 'NULL_CHECK',
+              'REQUIRED': 'REQUIRED', 'MISSING': 'MISSING', 'VALID': 'VALID'
+            };
+
+            // Try to find a matching key
+            let dataKey = null;
+            for (const [key, val] of Object.entries(idMap)) {
+              if (nodeId === key || node.id.includes(key)) {
+                dataKey = key;
+                break;
+              }
+            }
+
+            // Fallback: search by text content
+            if (!dataKey) {
+              const text = node.textContent || '';
+              for (const [key, data] of Object.entries(stepData)) {
+                const num = data.title.match(/[①-⑳✓]/)?.[0];
+                if (num && text.includes(num)) {
+                  dataKey = key;
+                  break;
+                }
+              }
+            }
+
+            if (dataKey && stepData[dataKey]) {
+              openFlyout(dataKey);
+            }
+          });
+        });
+      }, 1000);
+    });
+
+    const flyout = document.getElementById('flyout');
+    const backdrop = document.getElementById('backdrop');
+    const flyoutTitle = document.getElementById('flyout-title');
+    const flyoutBadge = document.getElementById('flyout-badge-container');
+    const flyoutBody = document.getElementById('flyout-body');
+    const flyoutClose = document.getElementById('flyout-close');
+
+    function openFlyout(key) {
+      const data = stepData[key];
+      if (!data) return;
+      flyoutTitle.textContent = data.title;
+      flyoutBadge.innerHTML = data.badge;
+      flyoutBody.innerHTML = data.body;
+      flyout.classList.add('open');
+      backdrop.classList.add('visible');
+    }
+
+    function closeFlyout() {
+      flyout.classList.remove('open');
+      backdrop.classList.remove('visible');
+    }
+
+    flyoutClose.addEventListener('click', closeFlyout);
+    backdrop.addEventListener('click', closeFlyout);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeFlyout();
+    });
+  </script>
+</body>
+</html>

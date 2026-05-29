@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Company Power Schedules — Enhanced for Multi-Outlet</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; padding: 20px; }
+
+  .page-header { background: #fff; border-bottom: 2px solid #ddd; padding: 16px 24px; margin: -20px -20px 20px; }
+  .page-header h1 { font-size: 18px; font-weight: 600; }
+  .breadcrumb { font-size: 13px; color: #888; margin-top: 4px; }
+  .breadcrumb a { color: #337ab7; text-decoration: none; }
+
+  .banner { background: #2c6b77; color: #fff; padding: 12px 20px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; }
+
+  .note-box { background: #fff8e1; border: 1px solid #ffe082; border-radius: 6px; padding: 12px 16px; font-size: 13px; color: #795548; margin-bottom: 20px; }
+  .note-box strong { color: #5d4037; }
+
+  .card { background: #fff; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; margin-bottom: 20px; }
+  .card-header { background: #e8e8e8; padding: 14px 20px; font-size: 16px; color: #444; display: flex; justify-content: space-between; align-items: center; }
+  .card-body { padding: 20px; }
+
+  .new-schedule-btn { padding: 8px 16px; background: #444; color: #fff; border: none; border-radius: 4px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  .new-schedule-btn:hover { background: #222; }
+
+  /* Schedule Cards Grid */
+  .schedule-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  .schedule-card { border: 1px dashed #ccc; border-radius: 8px; padding: 20px; position: relative; cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s; }
+  .schedule-card:hover { border-color: #999; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
+  .schedule-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+  .schedule-name { font-size: 16px; font-weight: 600; }
+  .schedule-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .schedule-badge.active { background: #27ae60; color: #fff; }
+  .schedule-badge.inactive { background: #eee; color: #999; }
+
+  .schedule-meta { font-size: 13px; color: #888; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+  .schedule-meta-icon { font-size: 14px; }
+
+  .schedule-counts { display: flex; gap: 16px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee; font-size: 13px; }
+  .count-item { display: flex; align-items: center; gap: 4px; color: #555; }
+  .count-item .count-num { font-weight: 600; }
+  .count-item .count-label { color: #888; }
+
+  .schedule-actions { display: flex; gap: 8px; margin-top: 14px; }
+  .sch-action-btn { width: 36px; height: 36px; border-radius: 4px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .sch-edit-btn { background: #555; color: #fff; }
+  .sch-edit-btn:hover { background: #333; }
+  .sch-delete-btn { background: #c0392b; color: #fff; }
+  .sch-delete-btn:hover { background: #a93226; }
+
+  .pagination { display: flex; align-items: center; gap: 12px; font-size: 13px; color: #888; margin-top: 16px; }
+  .pagination select { padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; }
+
+  /* Schedule Detail Panel (shown when clicking a card) */
+  .schedule-detail { display: none; margin-top: 20px; }
+  .schedule-detail.active { display: block; }
+  .schedule-detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .schedule-detail-title { font-size: 16px; font-weight: 600; }
+  .close-detail-btn { background: none; border: 1px solid #ccc; border-radius: 4px; padding: 6px 12px; font-size: 13px; cursor: pointer; color: #555; }
+  .close-detail-btn:hover { background: #f5f5f5; }
+
+  /* Devices in schedule table */
+  .devices-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px; }
+  .devices-table thead th { background: #f5f5f5; text-align: left; padding: 10px 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; color: #777; letter-spacing: 0.5px; border-bottom: 2px solid #ddd; }
+  .devices-table tbody td { padding: 10px 12px; border-bottom: 1px solid #eee; vertical-align: middle; }
+  .devices-table tbody tr:hover { background: #fafafa; }
+
+  .device-link { color: #337ab7; text-decoration: none; font-weight: 500; }
+  .device-link:hover { text-decoration: underline; }
+
+  .status-badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 500; }
+  .status-badge.active { background: #e8f5e9; color: #2e7d32; }
+  .status-badge.deactivated { background: #fce4ec; color: #c62828; }
+
+  .power-state { display: inline-flex; align-items: center; gap: 6px; }
+  .power-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .power-dot.on { background: #27ae60; }
+  .power-dot.off { background: #999; }
+  .power-dot.unknown { background: #f0ad4e; }
+
+  .outlet-tag { display: inline-block; background: #e3f2fd; color: #1565c0; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; margin: 1px 2px; }
+  .outlet-tag.all { background: #e8f5e9; color: #2e7d32; }
+
+  /* Expandable outlet rows */
+  .device-row { cursor: pointer; }
+  .device-row.multi-outlet td:first-child { position: relative; padding-left: 28px; }
+  .expand-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 12px; color: #888; transition: transform 0.2s; }
+  .expand-icon.open { transform: translateY(-50%) rotate(90deg); }
+  .outlet-subrow { display: none; }
+  .outlet-subrow.visible { display: table-row; }
+  .outlet-subrow td { padding-left: 40px !important; background: #fafafa; font-size: 12px; }
+  .outlet-subrow td:first-child { color: #888; }
+
+  .override-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+  .override-badge.off { background: #fce4ec; color: #c62828; }
+  .override-badge.none { color: #bbb; }
+
+  .last-action { font-size: 12px; color: #888; }
+  .last-action .error { color: #c62828; font-size: 11px; }
+
+  .actions-btn { padding: 6px 14px; background: #555; color: #fff; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; }
+  .actions-btn:hover { background: #333; }
+
+  /* Add device to schedule modal */
+  .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: center; justify-content: center; }
+  .modal-overlay.active { display: flex; }
+  .modal { background: #fff; border-radius: 8px; padding: 24px; width: 520px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); max-height: 80vh; overflow-y: auto; }
+  .modal h3 { margin-bottom: 6px; font-size: 16px; }
+  .modal .modal-subtitle { font-size: 13px; color: #888; margin-bottom: 20px; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+  .modal-actions button { padding: 8px 16px; border-radius: 4px; font-size: 13px; cursor: pointer; }
+  .btn-cancel { background: #eee; border: 1px solid #ccc; color: #555; }
+  .btn-save { background: #444; border: none; color: #fff; }
+
+  .device-select-row { padding: 12px; border: 1px solid #eee; border-radius: 6px; margin-bottom: 8px; }
+  .device-select-row:hover { background: #fafafa; }
+  .device-select-header { display: flex; align-items: center; gap: 10px; }
+  .device-select-header input[type="checkbox"] { width: 16px; height: 16px; }
+  .device-select-info { flex: 1; }
+  .device-select-name { font-weight: 600; font-size: 14px; }
+  .device-select-meta { font-size: 12px; color: #888; }
+  .device-select-model { display: inline-block; background: #f0f0f0; padding: 1px 6px; border-radius: 3px; font-size: 11px; color: #555; }
+
+  /* Outlet checkboxes for multi-outlet devices */
+  .outlet-select-group { margin-top: 8px; padding-left: 26px; }
+  .outlet-select-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; }
+  .outlet-select-row input[type="checkbox"] { width: 14px; height: 14px; }
+  .outlet-select-label { color: #555; }
+  .outlet-select-existing { font-size: 11px; color: #999; font-style: italic; }
+
+  .select-all-outlets { font-size: 12px; color: #337ab7; cursor: pointer; background: none; border: none; text-decoration: underline; margin-left: 26px; margin-top: 4px; }
+
+  .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .toolbar-left { display: flex; gap: 12px; align-items: center; }
+  .toolbar-right { display: flex; gap: 8px; }
+  .toolbar-btn { padding: 8px 14px; border-radius: 4px; font-size: 13px; cursor: pointer; border: 1px solid #ccc; background: #fff; color: #555; display: flex; align-items: center; gap: 6px; }
+  .toolbar-btn:hover { background: #f5f5f5; }
+  .toolbar-btn.primary { background: #2c6b77; color: #fff; border-color: #2c6b77; }
+  .toolbar-btn.primary:hover { background: #245a64; }
+  .select-all-btn { background: #337ab7; color: #fff; border-color: #337ab7; }
+  .bulk-btn { background: #555; color: #fff; border-color: #555; }
+
+  .filter-bar { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .filter-bar label { font-size: 12px; color: #777; font-weight: 500; }
+  .filter-bar input { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; width: 160px; }
+  .filter-bar select { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+  .clear-filters { font-size: 12px; color: #c0392b; cursor: pointer; background: none; border: none; text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Admin/CompanyPowerSchedules</h1>
+  <div class="breadcrumb"><a href="#">Orases Test Company</a> &rsaquo; Browse Company Power Management</div>
+</div>
+
+<div class="banner">50% off devices in November!</div>
+
+<div class="note-box">
+  <strong>Prototype:</strong> Company Power Schedules page — enhanced for multi-outlet devices. Schedule cards now show device + outlet counts. Click a schedule card to see the device list with expandable outlet rows. Click "+ Add Device" to see the outlet-aware assignment flow.
+</div>
+
+<!-- Company Power Schedules -->
+<div class="card">
+  <div class="card-header">
+    <span>Company Power Schedules</span>
+    <button class="new-schedule-btn">+ New Schedule</button>
+  </div>
+  <div class="card-body">
+    <div class="schedule-grid">
+
+      <!-- Schedule 1: Business Hours -->
+      <div class="schedule-card" onclick="showScheduleDetail('business-hours')">
+        <div class="schedule-card-top">
+          <div class="schedule-name">Business Hours</div>
+          <span class="schedule-badge active">Active</span>
+        </div>
+        <div class="schedule-meta"><span class="schedule-meta-icon">&#128339;</span> Eastern Time</div>
+        <div class="schedule-meta">Days active: Mon-Sat</div>
+        <div class="schedule-meta">ON: 8:00 AM &mdash; OFF: 10:00 PM</div>
+        <div class="schedule-counts">
+          <div class="count-item"><span class="count-num">4</span><span class="count-label">Devices</span></div>
+          <div class="count-item"><span class="count-num">7</span><span class="count-label">Outlets</span></div>
+        </div>
+        <div class="schedule-actions" onclick="event.stopPropagation()">
+          <button class="sch-action-btn sch-edit-btn" title="Edit">&#9998;</button>
+          <button class="sch-action-btn sch-delete-btn" title="Delete">&#128465;</button>
+        </div>
+      </div>
+
+      <!-- Schedule 2: Night Off -->
+      <div class="schedule-card" onclick="showScheduleDetail('night-off')">
+        <div class="schedule-card-top">
+          <div class="schedule-name">Night Off</div>
+          <span class="schedule-badge active">Active</span>
+        </div>
+        <div class="schedule-meta"><span class="schedule-meta-icon">&#128339;</span> Eastern Time</div>
+        <div class="schedule-meta">Days active: Daily</div>
+        <div class="schedule-meta">ON: 6:00 AM &mdash; OFF: 11:00 PM</div>
+        <div class="schedule-counts">
+          <div class="count-item"><span class="count-num">2</span><span class="count-label">Devices</span></div>
+          <div class="count-item"><span class="count-num">2</span><span class="count-label">Outlets</span></div>
+        </div>
+        <div class="schedule-actions" onclick="event.stopPropagation()">
+          <button class="sch-action-btn sch-edit-btn" title="Edit">&#9998;</button>
+          <button class="sch-action-btn sch-delete-btn" title="Delete">&#128465;</button>
+        </div>
+      </div>
+
+      <!-- Schedule 3: Weekend Only -->
+      <div class="schedule-card">
+        <div class="schedule-card-top">
+          <div class="schedule-name">Weekend Only</div>
+          <span class="schedule-badge inactive">Inactive</span>
+        </div>
+        <div class="schedule-meta"><span class="schedule-meta-icon">&#128339;</span> Eastern Time</div>
+        <div class="schedule-meta">Days active: Sat-Sun</div>
+        <div class="schedule-meta">ON: 9:00 AM &mdash; OFF: 6:00 PM</div>
+        <div class="schedule-counts">
+          <div class="count-item"><span class="count-num">0</span><span class="count-label">Devices</span></div>
+          <div class="count-item"><span class="count-num">0</span><span class="count-label">Outlets</span></div>
+        </div>
+        <div class="schedule-actions" onclick="event.stopPropagation()">
+          <button class="sch-action-btn sch-edit-btn" title="Edit">&#9998;</button>
+          <button class="sch-action-btn sch-delete-btn" title="Delete">&#128465;</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="pagination">
+      Page 1 of 1, 1-3 of 3.
+      <select><option>10</option></select>
+    </div>
+
+    <!-- Schedule Detail: Business Hours -->
+    <div class="schedule-detail" id="detail-business-hours">
+      <div class="schedule-detail-header">
+        <div class="schedule-detail-title">Business Hours &mdash; Devices &amp; Outlets</div>
+        <button class="close-detail-btn" onclick="hideScheduleDetail('business-hours')">Close</button>
+      </div>
+
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <span style="font-size: 13px; color: #888;">4 devices, 7 outlets on this schedule</span>
+        </div>
+        <div class="toolbar-right">
+          <button class="toolbar-btn primary" onclick="openAddDeviceModal()">+ Add Device</button>
+        </div>
+      </div>
+
+      <table class="devices-table">
+        <thead>
+          <tr>
+            <th style="width: 30px;"></th>
+            <th>Serial Number</th>
+            <th>Location</th>
+            <th>Model</th>
+            <th>Status</th>
+            <th>Outlets on Schedule</th>
+            <th>Power State</th>
+            <th>Override</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Single-outlet device -->
+          <tr class="device-row">
+            <td></td>
+            <td><a href="#" class="device-link">99999</a></td>
+            <td>123 Main St</td>
+            <td>I-22</td>
+            <td><span class="status-badge deactivated">Deactivated</span></td>
+            <td><span class="outlet-tag all">Device (single)</span></td>
+            <td><span class="power-state"><span class="power-dot on"></span> ON</span></td>
+            <td><span class="override-badge off">Override: Off</span></td>
+            <td><button class="actions-btn">Actions &#9662;</button></td>
+          </tr>
+
+          <!-- Single-outlet device -->
+          <tr class="device-row">
+            <td></td>
+            <td><a href="#" class="device-link">AD0010</a></td>
+            <td>456 Oak Ave</td>
+            <td>I-22</td>
+            <td><span class="status-badge active">Active</span></td>
+            <td><span class="outlet-tag all">Device (single)</span></td>
+            <td><span class="power-state"><span class="power-dot unknown"></span> Unknown</span></td>
+            <td><span class="override-badge none">No Override</span></td>
+            <td><button class="actions-btn">Actions &#9662;</button></td>
+          </tr>
+
+          <!-- Multi-outlet device: all outlets on this schedule -->
+          <tr class="device-row multi-outlet" onclick="toggleOutletRows('dev-w52290')">
+            <td><span class="expand-icon" id="expand-dev-w52290">&#9654;</span></td>
+            <td><a href="#" class="device-link" onclick="event.stopPropagation()">W52290</a></td>
+            <td>789 Gaming Ctr</td>
+            <td>I-52</td>
+            <td><span class="status-badge active">Active</span></td>
+            <td>
+              <span class="outlet-tag">1: ATM</span>
+              <span class="outlet-tag">2: Jukebox</span>
+              <span class="outlet-tag">3: Game 1</span>
+            </td>
+            <td>&mdash;</td>
+            <td>&mdash;</td>
+            <td><button class="actions-btn" onclick="event.stopPropagation()">Actions &#9662;</button></td>
+          </tr>
+          <tr class="outlet-subrow" data-parent="dev-w52290">
+            <td></td>
+            <td style="padding-left: 40px !important; color: #888;">&#8627; Outlet 1</td>
+            <td>"ATM"</td>
+            <td></td>
+            <td></td>
+            <td><span class="outlet-tag">Business Hours</span></td>
+            <td><span class="power-state"><span class="power-dot on"></span> ON</span></td>
+            <td><span class="override-badge none">No Override</span></td>
+            <td><button class="actions-btn">Actions &#9662;</button></td>
+          </tr>
+          <tr class="outlet-subrow" data-parent="dev-w52290">
+            <td></td>
+            <td style="padding-left: 40px !important; color: #888;">&#8627; Outlet 2</td>
+            <td>"Jukebox"</td>
+            <td></td>
+            <td></td>
+            <td><span class="outlet-tag">Business Hours</span></td>
+            <td><span class="power-state"><span class="power-dot on"></span> ON</span></td>
+            <td><span class="override-badge none">No Override</span></td>
+            <td><button class="actions-btn">Actions &#9662;</button></td>
+          </tr>
+          <tr class="outlet-subrow" data-parent="dev-w52290">
+            <td></td>
+            <td style="padding-left: 40px !important; color: #888;">&#8627; Outlet 3</td>
+            <td>"Game 1"</td>
+            <td></td>
+            <td></td>
+            <td><span class="outlet-tag">Business Hours</span></td>
+            <td><span class="power-state"><span class="power-dot off"></span> OFF</span></td>
+            <td><span class="override-badge none">No Override</span></td>
+            <td><button class="actions-btn">Actions &#9662;</button></td>
+          </tr>
+          <tr class="outlet-subrow" data-parent="dev-w52290">
+            <td></td>
+            <td style="padding-left: 40px !important; color: #888;">&#8627; Outlet 4</td>
+            <td style="color: #bbb; font-style: italic;">(unlabeled)</td>
+            <td></td>
+            <td></td>
+            <td style="color: #bbb;">Not on this schedule</td>
+            <td><span class="power-state"><span class="power-dot unknown"></span> Unknown</span></td>
+            <td><span class="override-badge none">No Override</span></td>
+            <td></td>
+          </tr>
+
+          <!-- Multi-outlet device: partial outlets -->
+          <tr class="device-row multi-outlet" onclick="toggleOutletRows('dev-w52310')">
+            <td><span class="expand-icon" id="expand-dev-w52310">&#9654;</span></td>
+            <td><a href="#" class="device-link" onclick="event.stopPropagation()">W52310</a></td>
+            <td>555 Bar & Grill</td>
+            <td>I-52</td>
+            <td><span class="status-badge active">Active</span></td>
+            <td>
+              <span class="outlet-tag">2: Kiosk</span>
+            </td>
+            <td>&mdash;</td>
+            <td>&mdash;</td>
+            <td><button class="actions-btn" onclick="event.stopPropagation()">Actions &#9662;</button></td>
+          </tr>
+          <tr class="outlet-subrow" data-parent="dev-w52310">
+            <td></td>
+            <td style="padding-left: 40px !important; color: #888;">&#8627; Outlet 1</td>
+            <td>"POS Terminal"</td>
+            <td></td>
+            <td></td>
+            <td style="color: #999;">Night Off <span style="font-size:10px;">(different schedule)</span></td>
+            <td><span class="power-state"><span class="power-dot on"></span> ON</span></td>
+            <td><span class="override-badge none">No Override</span></td>
+            <td></td>
+          </tr>
+          <tr class="outlet-subrow" data-parent="dev-w52310">
+            <td></td>
+            <td style="padding-left: 40px !important; color: #888;">&#8627; Outlet 2</td>
+            <td>"Kiosk"</td>
+            <td></td>
+            <td></td>
+            <td><span class="outlet-tag">Business Hours</span></td>
+            <td><span class="power-state"><span class="power-dot on"></span> ON</span></td>
+            <td><span class="override-badge none">No Override</span></td>
+            <td><button class="actions-btn">Actions &#9662;</button></td>
+          </tr>
+          <tr class="outlet-subrow" data-parent="dev-w52310">
+            <td></td>
+            <td style="padding-left: 40px !important; color: #888;">&#8627; Outlet 3</td>
+            <td>"Game"</td>
+            <td></td>
+            <td></td>
+            <td style="color: #bbb;">No schedule</td>
+            <td><span class="power-state"><span class="power-dot on"></span> ON</span></td>
+            <td><span class="override-badge none">No Override</span></td>
+            <td></td>
+          </tr>
+          <tr class="outlet-subrow" data-parent="dev-w52310">
+            <td></td>
+            <td style="padding-left: 40px !important; color: #888;">&#8627; Outlet 4</td>
+            <td style="color: #bbb; font-style: italic;">(unlabeled)</td>
+            <td></td>
+            <td></td>
+            <td style="color: #bbb;">No schedule</td>
+            <td><span class="power-state"><span class="power-dot unknown"></span> Unknown</span></td>
+            <td><span class="override-badge none">No Override</span></td>
+            <td></td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Schedule Detail: Night Off -->
+    <div class="schedule-detail" id="detail-night-off">
+      <div class="schedule-detail-header">
+        <div class="schedule-detail-title">Night Off &mdash; Devices &amp; Outlets</div>
+        <button class="close-detail-btn" onclick="hideScheduleDetail('night-off')">Close</button>
+      </div>
+
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <span style="font-size: 13px; color: #888;">2 devices, 2 outlets on this schedule</span>
+        </div>
+        <div class="toolbar-right">
+          <button class="toolbar-btn primary" onclick="openAddDeviceModal()">+ Add Device</button>
+        </div>
+      </div>
+
+      <table class="devices-table">
+        <thead>
+          <tr>
+            <th style="width: 30px;"></th>
+            <th>Serial Number</th>
+            <th>Location</th>
+            <th>Model</th>
+            <th>Status</th>
+            <th>Outlets on Schedule</th>
+            <th>Power State</th>
+            <th>Override</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="device-row">
+            <td></td>
+            <td><a href="#" class="device-link">W52290</a></td>
+            <td>123 Main St</td>
+            <td>I-22</td>
+            <td><span class="status-badge active">Active</span></td>
+            <td><span class="outlet-tag all">Device (single)</span></td>
+            <td><span class="power-state"><span class="power-dot on"></span> ON</span></td>
+            <td><span class="override-badge none">No Override</span></td>
+            <td><button class="actions-btn">Actions &#9662;</button></td>
+          </tr>
+          <tr class="device-row">
+            <td></td>
+            <td><a href="#" class="device-link">W52310</a></td>
+            <td>555 Bar & Grill</td>
+            <td>I-52</td>
+            <td><span class="status-badge active">Active</span></td>
+            <td><span class="outlet-tag">1: POS Terminal</span></td>
+            <td><span class="power-state"><span class="power-dot on"></span> ON</span></td>
+            <td><span class="override-badge none">No Override</span></td>
+            <td><button class="actions-btn">Actions &#9662;</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Add Device to Schedule Modal -->
+<div class="modal-overlay" id="addDeviceModal">
+  <div class="modal">
+    <h3>Add Device to Schedule</h3>
+    <div class="modal-subtitle">Schedule: <strong>Business Hours</strong> &mdash; Select devices and outlets to add.</div>
+
+    <!-- Single-outlet device -->
+    <div class="device-select-row">
+      <div class="device-select-header">
+        <input type="checkbox" id="addDev1">
+        <div class="device-select-info">
+          <div class="device-select-name">AD3333 <span class="device-select-model">I-22</span></div>
+          <div class="device-select-meta">Location: 100 Elm St &mdash; Active</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Single-outlet device already on a different schedule -->
+    <div class="device-select-row">
+      <div class="device-select-header">
+        <input type="checkbox" id="addDev2">
+        <div class="device-select-info">
+          <div class="device-select-name">AD2222 <span class="device-select-model">I-22</span></div>
+          <div class="device-select-meta">Location: 200 Pine St &mdash; Active</div>
+          <div class="device-select-meta"><span class="outlet-select-existing">Currently on: Night Off</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Multi-outlet device: pick outlets -->
+    <div class="device-select-row">
+      <div class="device-select-header">
+        <input type="checkbox" id="addDev3" onchange="toggleMultiOutletSelect('dev3')">
+        <div class="device-select-info">
+          <div class="device-select-name">W52400 <span class="device-select-model">I-52</span> <span style="font-size:11px; color:#1565c0;">(4-outlet relay)</span></div>
+          <div class="device-select-meta">Location: 300 Gaming Ave &mdash; Active</div>
+        </div>
+      </div>
+      <div class="outlet-select-group" id="outlets-dev3" style="display:none;">
+        <button class="select-all-outlets" onclick="selectAllOutlets('dev3')">Select all outlets</button>
+        <div class="outlet-select-row">
+          <input type="checkbox" id="dev3-o1">
+          <span class="outlet-select-label">Outlet 1 &mdash; "ATM"</span>
+        </div>
+        <div class="outlet-select-row">
+          <input type="checkbox" id="dev3-o2">
+          <span class="outlet-select-label">Outlet 2 &mdash; "Jukebox"</span>
+        </div>
+        <div class="outlet-select-row">
+          <input type="checkbox" id="dev3-o3">
+          <span class="outlet-select-label">Outlet 3 &mdash; "Game 1"</span>
+          <span class="outlet-select-existing">(currently on: Night Off)</span>
+        </div>
+        <div class="outlet-select-row">
+          <input type="checkbox" id="dev3-o4">
+          <span class="outlet-select-label">Outlet 4 &mdash; (unlabeled)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Multi-outlet device: some outlets already on this schedule -->
+    <div class="device-select-row">
+      <div class="device-select-header">
+        <input type="checkbox" id="addDev4" onchange="toggleMultiOutletSelect('dev4')">
+        <div class="device-select-info">
+          <div class="device-select-name">W52310 <span class="device-select-model">I-52</span> <span style="font-size:11px; color:#1565c0;">(4-outlet relay)</span></div>
+          <div class="device-select-meta">Location: 555 Bar & Grill &mdash; Active</div>
+          <div class="device-select-meta"><span class="outlet-select-existing">Outlet 2 already on this schedule</span></div>
+        </div>
+      </div>
+      <div class="outlet-select-group" id="outlets-dev4" style="display:none;">
+        <button class="select-all-outlets" onclick="selectAllOutlets('dev4')">Select all available outlets</button>
+        <div class="outlet-select-row">
+          <input type="checkbox" id="dev4-o1">
+          <span class="outlet-select-label">Outlet 1 &mdash; "POS Terminal"</span>
+          <span class="outlet-select-existing">(currently on: Night Off)</span>
+        </div>
+        <div class="outlet-select-row">
+          <input type="checkbox" id="dev4-o2" checked disabled>
+          <span class="outlet-select-label" style="color:#999;">Outlet 2 &mdash; "Kiosk" (already on this schedule)</span>
+        </div>
+        <div class="outlet-select-row">
+          <input type="checkbox" id="dev4-o3">
+          <span class="outlet-select-label">Outlet 3 &mdash; "Game"</span>
+        </div>
+        <div class="outlet-select-row">
+          <input type="checkbox" id="dev4-o4">
+          <span class="outlet-select-label">Outlet 4 &mdash; (unlabeled)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeAddDeviceModal()">Cancel</button>
+      <button class="btn-save" onclick="closeAddDeviceModal()">Add to Schedule</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showScheduleDetail(id) {
+    // Hide all detail panels
+    document.querySelectorAll('.schedule-detail').forEach(d => d.classList.remove('active'));
+    document.getElementById('detail-' + id).classList.add('active');
+    document.getElementById('detail-' + id).scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function hideScheduleDetail(id) {
+    document.getElementById('detail-' + id).classList.remove('active');
+  }
+
+  function toggleOutletRows(parentId) {
+    const rows = document.querySelectorAll('.outlet-subrow[data-parent="' + parentId + '"]');
+    const icon = document.getElementById('expand-' + parentId);
+    const isOpen = icon.classList.contains('open');
+
+    rows.forEach(r => {
+      if (isOpen) {
+        r.classList.remove('visible');
+      } else {
+        r.classList.add('visible');
+      }
+    });
+
+    if (isOpen) {
+      icon.classList.remove('open');
+    } else {
+      icon.classList.add('open');
+    }
+  }
+
+  function openAddDeviceModal() {
+    document.getElementById('addDeviceModal').classList.add('active');
+  }
+
+  function closeAddDeviceModal() {
+    document.getElementById('addDeviceModal').classList.remove('active');
+  }
+
+  function toggleMultiOutletSelect(devId) {
+    const checkbox = document.getElementById('addDev' + devId.replace('dev', ''));
+    const outlets = document.getElementById('outlets-' + devId);
+    outlets.style.display = checkbox.checked ? 'block' : 'none';
+  }
+
+  function selectAllOutlets(devId) {
+    const group = document.getElementById('outlets-' + devId);
+    group.querySelectorAll('input[type="checkbox"]:not(:disabled)').forEach(cb => cb.checked = true);
+  }
+</script>
+
+</body>
+</html>
