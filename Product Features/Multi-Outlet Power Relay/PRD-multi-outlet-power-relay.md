@@ -1,13 +1,14 @@
 # Product Requirements Document
 ## Multi-Outlet Power Relay (i52)
 
-**Document Version:** 1.0
+**Document Version:** 1.1
 **Date:** 2026-05-26
 **Author:** Aksana Rahouski (Orases)
 **Status:** Draft
 **Related Tickets:** None yet
+**Phase 1 Dependency:** [PRD — Single-Outlet Power Relay Enhancements](PRD-single-outlet-power-relay-enhancements.md)
 **Document Owner:** Aksana Rahouski
-**Last Updated:** 26.05.2026
+**Last Updated:** 03.06.2026
 
 ---
 
@@ -55,16 +56,16 @@ For i52 devices where the customer has installed the relay hardware and activate
 
 1. **Enable independent remote power control of up to 4 outlets** per i52 device through the WATM portal
 2. **Provide per-outlet scheduling** so customers can automate power on/off times for individual pieces of equipment
-3. **Migrate power relay capability from configuration groups to the model level** to align the data model with how relay capability is actually determined (by hardware model, not config group)
+3. **Migrate power relay capability from configuration groups to the model level** to align the data model with how relay capability is actually determined (by hardware model, not config group) — *Note: This is delivered by Phase 1 (Single-Outlet Power Relay Enhancements). Phase 2 inherits the model-level `relay_type` enum established in Phase 1.*
 
 ### Success Criteria
 
-- Portal users can activate the four-outlet relay on any i52 device and control each outlet independently (on/off/restart)
-- Each outlet can be labeled, and labels persist across sessions
-- Per-outlet power schedules can be created, edited, and deleted independently of other outlets on the same device
-- Outlet status (on/off) displayed on the device page reflects actual DIO state from the most recent check-in
-- Existing power relay functionality for i22, i4500, and Systex models remains unchanged
-- When the four-outlet relay is activated on an i52 device, the single "Restart Power Cycler" button is replaced by the multi-outlet power management module. i52 devices without the relay activated retain the existing single restart button.
+- ✅ Portal users can activate the four-outlet relay on any i52 device and control each outlet independently (on/off/restart)
+- ✅ Each outlet can be labeled, and labels persist across sessions
+- ✅ Per-outlet power schedules can be created, edited, and deleted independently of other outlets on the same device
+- ✅ Outlet status (on/off) displayed on the device page reflects actual DIO state from the most recent check-in
+- ✅ Existing power relay functionality for i22, i4500, and Systex models remains unchanged
+- ✅ When the four-outlet relay is activated on an i52 device, the single "Restart Power Cycler" button is replaced by the multi-outlet power management module. i52 devices without the relay activated retain the existing single restart button.
 
 ---
 
@@ -127,20 +128,17 @@ For i52 devices where the customer has installed the relay hardware and activate
 
 ## Functional Requirements and Business Rules
 
-### FR-1: Model-Level Power Relay Capability
+### FR-1: Model-Level Power Relay Capability *(Delivered by Phase 1)*
+
+> **Phase 1 delivers this requirement.** The Single-Outlet Power Relay Enhancements PRD (Phase 1, FR-1) introduces the model-level `relay_type` enum (`none` / `single` / `multi`), migrates the legacy `is_power_cycler_capable` flag from configuration groups, and adds relay capability display to the Device Model admin page. Phase 2 inherits this data model — no additional migration work is needed here.
 
 **FR-1.1: The system shall define power relay capability at the model level, not the configuration group level.**
-- A new attribute on the device model record indicates whether that model supports power relay
-- For i52 models, this attribute shall indicate "multi-outlet power relay" (4 outlets)
-- For i22, i4500, and Systex models, this attribute shall indicate "single-outlet power relay" (1 outlet, existing behavior)
-- Models without relay capability (e.g., i4100) shall have no relay attribute
-
-**Business Rules:**
-- The relay capability attribute determines which power management UI appears on the device detail page
-- Migration: Existing power-cycler-capable flags on configuration groups shall be migrated to model-level attributes. The configuration group flag shall be deprecated.
+- A `relay_type` enum on the device model record indicates capability: `none`, `single` (1 outlet — i22, i4500, Systex), or `multi` (4 outlets — i52)
+- Phase 1 creates and populates this field; Phase 2 uses the `multi` value to drive the four-outlet UI
 
 **FR-1.2: The model management page shall display a column indicating relay capability.**
 - The column shall show "Multi-Outlet (4)" for i52, "Single-Outlet" for i22/i4500/Systex, and blank/none for models without relay support
+- *This UI is built in Phase 1.*
 
 ---
 
@@ -152,7 +150,7 @@ For i52 devices where the customer has installed the relay hardware and activate
 - The toggle is a yes/no control, not a multi-step wizard
 
 **Business Rules:**
-- The relay is a "dumb" hardware accessory with no electronic handshake — the portal cannot detect whether a relay is physically connected. The toggle is a user declaration.
+- Phase 1 introduces automated hardware detection that can verify whether a single-outlet relay is physically connected (via DIO input-mode circuit detection). For Phase 2 (multi-outlet), the same detection pattern extends to all 4 DIO ports — the system can check each port to confirm relay wiring before enabling controls. The activation toggle remains a user declaration, but the portal can now validate it against hardware detection results.
 - When toggled to "Yes": The four-outlet power management module becomes visible on the device page
 - When toggled to "No": The power management module is hidden
 - See [Q-4](PRD-multi-outlet-power-relay-QA.md#q-4-relay-activation-toggle--who-can-enabledisable-it) for open question on role permissions for this toggle
@@ -459,9 +457,10 @@ Each outlet shall have:
 ### Dependencies
 
 **Must Exist Before Development:**
-1. **Physical hardware for testing** — i52 router + four-outlet relay + wiring harness from Adam/APW | **Mitigation:** Adam building ~10 prototypes; request one be shipped to Orases before dev starts
-2. **DIO command documentation** — Exact API call format, DIO port numbering, and inverted logic specification | **Mitigation:** Adam confirmed API is tested and working; request formal documentation
-3. **DIO port-to-outlet mapping** — Which DIO port number controls which physical outlet position | **Mitigation:** See Q-6; request from Adam/InHand
+1. **Phase 1 — Single-Outlet Power Relay Enhancements** — Phase 1 must be complete before Phase 2 development begins. Phase 1 delivers: (a) model-level `relay_type` enum that Phase 2 uses to identify multi-outlet-capable devices, (b) automated relay detection via DIO input-mode circuit check — Phase 2 extends this pattern to 4 ports, (c) gating of power actions behind detection confirmation. See [Phase 1 PRD](PRD-single-outlet-power-relay-enhancements.md).
+2. **Physical hardware for testing** — i52 router + four-outlet relay + wiring harness from Adam/APW | **Mitigation:** Adam building ~10 prototypes; request one be shipped to Orases before dev starts
+3. **DIO command documentation** — Exact API call format, DIO port numbering, and inverted logic specification | **Mitigation:** Adam confirmed API is tested and working; request formal documentation
+4. **DIO port-to-outlet mapping** — Which DIO port number controls which physical outlet position | **Mitigation:** See Q-6; request from Adam/InHand
 
 **Required for Testing:**
 - IO config entry format for POM 1.2 to enable DIO state reporting in check-ins
@@ -480,11 +479,11 @@ Each outlet shall have:
 - **Probability:** Low — Adam has tested and confirmed the inverted logic works
 - **Mitigation:** Document exact command sequences. Test extensively with physical hardware before release. Include IT-7 (inverted logic validation) in test plan.
 
-**MEDIUM RISK: No Hardware Detection**
-- **Description:** The relay is a "dumb" accessory — the portal cannot detect whether it's physically connected. Users self-declare via the activation toggle.
-- **Impact:** Medium — Users could activate the relay toggle without hardware connected, then be confused when power commands have no effect
-- **Probability:** Low — APW controls hardware sales and customer onboarding
-- **Mitigation:** Display a note/tooltip on the activation toggle explaining that the physical relay must be installed first. Outlet status showing "Unknown" (no DIO data) serves as an indirect indicator.
+**LOW RISK: Hardware Detection for Multi-Outlet** *(Reduced from MEDIUM — mitigated by Phase 1)*
+- **Description:** Phase 1 introduces automated relay detection via DIO input-mode circuit check for single-outlet devices. Phase 2 extends this pattern to all 4 DIO ports on the i52, allowing the system to verify which outlets have relay hardware physically connected before enabling controls.
+- **Impact:** Low — With detection in place, the system can validate the user's activation toggle against actual hardware state and warn if no relay is detected on a given port
+- **Probability:** Low — Detection logic is proven in Phase 1; extending to 4 ports is a straightforward extension
+- **Mitigation:** Reuse Phase 1's detection API pattern (set IO to input mode → read io_level → restore output mode) for each of the 4 DIO ports. Gate per-outlet controls behind successful detection, consistent with Phase 1's gating approach for single-outlet devices.
 
 **LOW RISK: Legacy Button Replacement on i52**
 - **Description:** When a user activates the four-outlet relay, the existing single "Restart Power Cycler" button is replaced by the multi-outlet module. Users must understand the transition.
@@ -527,8 +526,10 @@ See [PRD-multi-outlet-power-relay-QA.md](PRD-multi-outlet-power-relay-QA.md) for
 - [Twilio SMS Integration](link) — Future feature for notification delivery (backlog item, above alarm management in priority)
 
 ### Supporting Documentation
+- [Phase 1 PRD — Single-Outlet Power Relay Enhancements](PRD-single-outlet-power-relay-enhancements.md) — Prerequisite phase delivering model-level relay capability, automated detection, and gated power controls
 - [Multi-Outlet Power Relay Discovery Document](Multi_Outlet_Power_Relay_IR315.md) — Original discovery notes from March 25, 2026 meeting
 - [APW Check-in Transcript — May 11, 2026](../../Meetings/Transcripts/2026-05-11_APW_Check-in.md) — Meeting where detailed requirements were discussed
+- [APW Sponsor Update — June 2, 2026](../../Meetings/Summaries/2026-06-02_APW_Project_Sponsor_Update_Summary.md) — Meeting where Phase 1/Phase 2 split and WATM-2163 (relay detection) were discussed
 - [Q&A Document](PRD-multi-outlet-power-relay-QA.md) — Open questions requiring stakeholder answers
 
 ---
@@ -544,7 +545,7 @@ See [PRD-multi-outlet-power-relay-QA.md](PRD-multi-outlet-power-relay-QA.md) for
 | Decision | Rationale | Source |
 |----------|-----------|--------|
 | i52 only — no multi-outlet on other models | i52 has 4 DIO ports; i22 has only 2 IO ports and cannot support 4-outlet relay | May 11 meeting (Adam) |
-| Relay activation is a manual toggle, not auto-detected | Relay is a "dumb" accessory with no electronic handshake | May 11 meeting (Devon, Adam) |
+| Relay activation is a manual toggle, validated by auto-detection | Phase 1 introduces automated detection via DIO circuit check (June 2 meeting, WATM-2163). The activation toggle remains, but the portal can now verify hardware presence. Phase 2 extends detection to all 4 DIO ports. | May 11 meeting (Devon, Adam); updated June 2 meeting |
 | No billing changes | Relay is one-time hardware purchase; no recurring portal fee | May 11 meeting (Devon) |
 | Replace single "Restart Power Cycler" with multi-outlet module when relay is activated on i52 | New module provides per-outlet control; devices without relay keep existing single button | May 11 meeting (Adam) |
 | Capability moves from config groups to model level | Config group flag was a historical workaround; model is the correct level | May 11 meeting (Devon confirmed "100%") |

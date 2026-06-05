@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Option B: Table Layout — Four-Outlet Power Relay</title>
+<title>Option B: Table Layout — Power Relay Management</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; padding: 20px; }
@@ -37,6 +37,16 @@
   .relay-hint { font-size: 12px; color: #888; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 6px; }
   .relay-hint .icon { color: #2c6b77; font-weight: bold; }
 
+  /* Restart All bar */
+  .restart-all-bar { display: flex; align-items: center; justify-content: space-between; background: #f0f4f5; border: 1px solid #d5e0e3; border-radius: 6px; padding: 10px 16px; margin-bottom: 16px; }
+  .restart-all-info { font-size: 13px; color: #555; }
+  .restart-all-info strong { color: #333; }
+  .active-count-badge { display: inline-block; background: #2c6b77; color: #fff; padding: 1px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; margin-left: 4px; }
+  .restart-all-btn { padding: 8px 18px; background: #c0392b; color: #fff; border: none; border-radius: 4px; font-size: 13px; font-weight: 500; cursor: pointer; }
+  .restart-all-btn:hover { background: #a93226; }
+  .restart-all-btn:disabled { background: #ccc; cursor: not-allowed; }
+  .restart-all-btn.restarting { background: #3498db; }
+
   /* Outlet Table */
   .outlet-table { width: 100%; border-collapse: collapse; font-size: 14px; }
   .outlet-table thead th { background: #f5f5f5; text-align: left; padding: 10px 12px; font-size: 12px; font-weight: 600; text-transform: uppercase; color: #777; letter-spacing: 0.5px; border-bottom: 2px solid #ddd; }
@@ -45,6 +55,8 @@
   .outlet-table tbody tr:hover { background: #fafafa; }
   .outlet-table tbody tr.off-row { background: #fdf8f8; }
   .outlet-table tbody tr.unknown-row { background: #fdfdf8; }
+  .outlet-table tbody tr.inactive-row { background: #f5f5f5; opacity: 0.65; }
+  .outlet-table tbody tr.inactive-row td { color: #aaa; }
 
   .outlet-num { font-weight: 600; color: #555; font-size: 13px; }
 
@@ -59,10 +71,17 @@
   .status-dot.off { background: #999; }
   .status-dot.unknown { background: #f0ad4e; }
   .status-dot.restarting { background: #3498db; animation: pulse 1s infinite; }
+  .status-dot.inactive-dot { background: #ccc; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
   .schedule-badge { background: #e8f5e9; color: #2e7d32; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; white-space: nowrap; }
   .no-schedule { color: #bbb; font-size: 13px; }
+
+  /* Active badge */
+  .active-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .active-badge.in-use { background: #e8f5e9; color: #2e7d32; }
+  .active-badge.not-in-use { background: #f5f5f5; color: #999; }
+  .activate-link { font-size: 11px; color: #337ab7; cursor: pointer; background: none; border: none; text-decoration: underline; padding: 0; margin-left: 6px; }
 
   /* Toggle Switch */
   .toggle-switch { position: relative; width: 40px; height: 22px; cursor: pointer; display: inline-block; vertical-align: middle; }
@@ -84,6 +103,25 @@
 
   .checkin-timestamp { font-size: 12px; color: #999; text-align: right; margin-top: 8px; }
 
+  /* Hardware Reference Diagram */
+  .hardware-ref { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; margin-bottom: 20px; }
+  .hardware-ref-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: #fafafa; border-bottom: 1px solid #eee; cursor: pointer; user-select: none; }
+  .hardware-ref-header:hover { background: #f0f0f0; }
+  .hardware-ref-title { font-size: 14px; font-weight: 600; color: #444; display: flex; align-items: center; gap: 8px; }
+  .hardware-ref-toggle { font-size: 12px; color: #888; }
+  .hardware-ref-body { padding: 20px; display: flex; align-items: flex-start; gap: 24px; }
+  .hardware-ref-body.collapsed { display: none; }
+  .hardware-ref-img-wrap { position: relative; flex-shrink: 0; }
+  .hardware-ref-img-wrap img { max-width: 440px; width: 100%; height: auto; border: 1px solid #e0e0e0; border-radius: 4px; }
+  .outlet-marker { position: absolute; width: 26px; height: 26px; border-radius: 50%; background: #2c6b77; color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.3); transform: translate(-50%, -50%); pointer-events: none; }
+  .hardware-ref-legend { flex: 1; min-width: 180px; }
+  .hardware-ref-legend h4 { font-size: 13px; font-weight: 600; color: #555; margin-bottom: 10px; }
+  .legend-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+  .legend-item:last-child { border-bottom: none; }
+  .legend-num { width: 24px; height: 24px; border-radius: 50%; background: #2c6b77; color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .legend-label { color: #333; }
+  .legend-sublabel { font-size: 11px; color: #999; }
+
   /* Bottom Action Bar */
   .action-bar { background: #fff; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 16px 20px; display: flex; gap: 12px; margin-bottom: 20px; }
   .action-btn { padding: 10px 18px; background: #444; color: #fff; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; }
@@ -92,20 +130,61 @@
   /* Label edit modal */
   .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: center; justify-content: center; }
   .modal-overlay.active { display: flex; }
-  .modal { background: #fff; border-radius: 8px; padding: 24px; width: 360px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+  .modal { background: #fff; border-radius: 8px; padding: 24px; width: 400px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
   .modal h3 { margin-bottom: 16px; font-size: 16px; }
   .modal input[type="text"] { width: 100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; margin-bottom: 16px; }
   .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
   .modal-actions button { padding: 8px 16px; border-radius: 4px; font-size: 13px; cursor: pointer; }
   .btn-cancel { background: #eee; border: 1px solid #ccc; color: #555; }
   .btn-save { background: #444; border: none; color: #fff; }
+  .btn-danger { background: #c0392b; border: none; color: #fff; }
 
   .note-box { background: #fff8e1; border: 1px solid #ffe082; border-radius: 6px; padding: 12px 16px; font-size: 13px; color: #795548; margin-bottom: 20px; }
   .note-box strong { color: #5d4037; }
 
-  /* Single-outlet power cycler module */
-  .single-power-module { display: none; }
-  .power-single { display: flex; align-items: stretch; gap: 0; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; background: #fafafa; }
+  .inactive-cell-text { color: #bbb; font-size: 12px; font-style: italic; }
+
+  /* =====================================================
+     SINGLE-OUTLET POWER RELAY MODULE (Phase 1 Enhanced)
+     ===================================================== */
+
+  /* Relay Detection Section */
+  .relay-detection { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; margin-bottom: 16px; }
+  .relay-detection-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background: #fafafa; border-bottom: 1px solid #eee; }
+  .relay-detection-title { font-size: 14px; font-weight: 600; color: #444; }
+  .relay-detection-body { padding: 16px 20px; }
+
+  /* Relay status states */
+  .relay-status { display: flex; align-items: center; gap: 12px; }
+  .relay-status-icon { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }
+  .relay-status-icon.detected { background: #e8f5e9; color: #27ae60; }
+  .relay-status-icon.not-detected { background: #f5f5f5; color: #999; }
+  .relay-status-icon.unknown { background: #fff8e1; color: #f0ad4e; }
+  .relay-status-icon.checking { background: #e3f2fd; color: #3498db; }
+  .relay-status-icon.error { background: #fce4ec; color: #c62828; }
+  .relay-status-text { flex: 1; }
+  .relay-status-label { font-size: 14px; font-weight: 600; }
+  .relay-status-label.detected { color: #2e7d32; }
+  .relay-status-label.not-detected { color: #777; }
+  .relay-status-label.unknown { color: #f57c00; }
+  .relay-status-label.checking { color: #1976d2; }
+  .relay-status-label.error { color: #c62828; }
+  .relay-status-sub { font-size: 12px; color: #999; margin-top: 2px; }
+
+  .check-relay-btn { padding: 8px 18px; background: #2c6b77; color: #fff; border: none; border-radius: 4px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+  .check-relay-btn:hover { background: #245a64; }
+  .check-relay-btn:disabled { background: #b0c4c8; cursor: not-allowed; }
+  .check-relay-btn .spinner { display: none; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
+  .check-relay-btn.checking .spinner { display: inline-block; }
+  .check-relay-btn.checking .btn-text { display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Power Controls Module (single outlet) */
+  .power-controls-module { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+  .power-controls-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background: #fafafa; border-bottom: 1px solid #eee; }
+  .power-controls-title { font-size: 14px; font-weight: 600; color: #444; }
+
+  .power-single { display: flex; align-items: stretch; gap: 0; background: #fff; }
   .power-section { flex: 1; padding: 16px 20px; display: flex; align-items: center; gap: 14px; border-right: 1px solid #eee; }
   .power-section:last-child { border-right: none; }
   .power-section.actions-section { flex: 0 0 auto; min-width: 140px; flex-direction: column; gap: 8px; justify-content: center; }
@@ -133,6 +212,7 @@
   .schedule-link:hover { text-decoration: underline; }
   .schedule-detail-text { font-size: 12px; color: #888; margin-top: 3px; }
   .schedule-active-badge { display: inline-block; background: #e8f5e9; color: #2e7d32; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+  .schedule-none-text { color: #bbb; font-size: 14px; }
 
   .override-info-section .override-badge-single { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; background: #f5f5f5; color: #999; }
 
@@ -140,6 +220,34 @@
   .single-toggle-label { font-size: 13px; font-weight: 500; }
   .single-toggle-label.on { color: #27ae60; }
   .single-toggle-label.off { color: #999; }
+
+  /* Gating message (no relay / unknown) */
+  .gating-message { display: flex; align-items: flex-start; gap: 12px; padding: 20px; background: #fafafa; border: 1px dashed #ddd; border-radius: 8px; }
+  .gating-message-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+  .gating-message-text { flex: 1; }
+  .gating-message-text p { font-size: 14px; color: #777; margin-bottom: 4px; }
+  .gating-message-text p.primary { font-weight: 500; color: #555; }
+  .gating-message-text p.secondary { font-size: 12px; color: #aaa; }
+
+  /* Scenario Switcher */
+  .scenario-bar { background: #fff; border: 2px solid #2c6b77; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; }
+  .scenario-bar h3 { font-size: 14px; color: #2c6b77; margin-bottom: 6px; }
+  .scenario-bar p { font-size: 12px; color: #888; margin-bottom: 12px; }
+  .scenario-group { margin-bottom: 10px; }
+  .scenario-group-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #999; font-weight: 600; margin-bottom: 6px; }
+  .scenario-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+  .scenario-btn { padding: 8px 14px; border: 1px solid #ccc; background: #fff; border-radius: 4px; font-size: 13px; cursor: pointer; }
+  .scenario-btn:hover { background: #f5f5f5; }
+  .scenario-btn.active { background: #2c6b77; color: #fff; border-color: #2c6b77; }
+
+  /* Restart All outlet list in modal */
+  .restart-all-list { margin: 10px 0 16px; padding: 0; list-style: none; }
+  .restart-all-list li { padding: 4px 0; font-size: 13px; color: #555; display: flex; align-items: center; gap: 8px; }
+  .restart-all-list li .status-dot { width: 8px; height: 8px; }
+
+  /* Powered by schedule indicator */
+  .powered-by { font-size: 11px; color: #2e7d32; margin-top: 2px; display: flex; align-items: center; gap: 4px; }
+  .powered-by .sched-icon { font-size: 12px; }
 </style>
 </head>
 <body>
@@ -152,7 +260,35 @@
 <div class="banner">50% off devices in November!</div>
 
 <div class="note-box">
-  <strong>Prototype:</strong> Option B — Table Layout for the four-outlet power relay module on an i52 device page. Toggle the relay dropdown between Yes/No to switch between the multi-outlet table view and the single-outlet power cycler view with state, schedule, and override info. Click outlet toggles, restart buttons, and label edit links to see interactions.
+  <strong>Prototype:</strong> Combined single-outlet and multi-outlet power relay management. Use the <strong>Scenario Switcher</strong> below to see different device states:
+  <br>- <strong>Single-outlet scenarios</strong> show the Phase 1 enhancements: relay detection ("Check Relay" button), gated power controls (hidden until relay is confirmed), schedule visibility, and on/off state.
+  <br>- <strong>Multi-outlet scenario</strong> shows the Phase 2 four-outlet table layout.
+</div>
+
+<!-- Scenario Switcher -->
+<div class="scenario-bar">
+  <h3>Scenario Switcher (for demo purposes)</h3>
+  <p>Select a scenario to see how the device page adapts to different relay states.</p>
+
+  <div class="scenario-group">
+    <div class="scenario-group-label">Single-Outlet Device (I-22) — Phase 1</div>
+    <div class="scenario-buttons" id="singleScenarios">
+      <button class="scenario-btn" onclick="setScenario('never-checked')">Never Checked</button>
+      <button class="scenario-btn" onclick="setScenario('checking')">Checking...</button>
+      <button class="scenario-btn active" onclick="setScenario('detected-on')">Relay Detected + ON</button>
+      <button class="scenario-btn" onclick="setScenario('detected-off-scheduled')">Detected + OFF (Scheduled)</button>
+      <button class="scenario-btn" onclick="setScenario('detected-on-scheduled')">Detected + ON (Scheduled)</button>
+      <button class="scenario-btn" onclick="setScenario('not-detected')">No Relay Detected</button>
+      <button class="scenario-btn" onclick="setScenario('check-error')">Check Error</button>
+    </div>
+  </div>
+
+  <div class="scenario-group" style="margin-bottom: 0;">
+    <div class="scenario-group-label">Multi-Outlet Device (I-52) — Phase 2</div>
+    <div class="scenario-buttons" id="multiScenarios">
+      <button class="scenario-btn" onclick="setScenario('multi-outlet')">Four-Outlet Relay</button>
+    </div>
+  </div>
 </div>
 
 <!-- Two Column Layout -->
@@ -167,12 +303,12 @@
       </div>
       <div class="info-row"><span class="info-label">Device Status</span><span class="info-value">Active / Online</span></div>
       <div class="info-row"><span class="info-label">Device Manufacturer</span><span class="info-value">InHand</span></div>
-      <div class="info-row"><span class="info-label">Device Model</span><span class="info-value">I-52</span></div>
-      <div class="info-row"><span class="info-label">Configuration</span><span class="info-value">VZW_52_Standard</span></div>
-      <div class="info-row"><span class="info-label">Serial Number</span><span class="info-value">W52290</span></div>
+      <div class="info-row"><span class="info-label">Device Model</span><span class="info-value" id="deviceModelDisplay">I-22</span></div>
+      <div class="info-row"><span class="info-label">Configuration</span><span class="info-value" id="deviceConfigDisplay">VZW_22_Standard</span></div>
+      <div class="info-row"><span class="info-label">Serial Number</span><span class="info-value" id="deviceSerialDisplay">W22105</span></div>
       <div class="info-row"><span class="info-label">IMEI</span><span class="info-value">359072061234567</span></div>
       <div class="info-row"><span class="info-label">IP Address</span><span class="info-value">10.0.5.42</span></div>
-      <div class="info-row"><span class="info-label">Last Check-in</span><span class="info-value">5/29/26, 10:15 AM</span></div>
+      <div class="info-row"><span class="info-label">Last Check-in</span><span class="info-value">6/3/26, 10:15 AM</span></div>
     </div>
   </div>
 
@@ -181,9 +317,8 @@
       <div class="card-header" style="background: #d5e8eb;">Data Usage</div>
       <div class="card-body">
         <div style="font-size: 14px; font-weight: 600; margin-bottom: 12px;">Data Usage Cycle Date: 5/11/26 - 6/10/26</div>
-        <div class="info-row"><span class="info-label">Current Data Usage</span><span class="info-value">1.2 GB</span></div>
-        <div class="info-row"><span class="info-label">Plan Price</span><span class="info-value">$24.99</span></div>
-        <div class="info-row"><span class="info-label">Projected Price</span><span class="info-value">$24.99</span></div>
+        <div class="info-row"><span class="info-label">Current Data Usage</span><span class="info-value">256 MB</span></div>
+        <div class="info-row"><span class="info-label">Plan Price</span><span class="info-value">$19.99</span></div>
       </div>
     </div>
     <div class="card">
@@ -195,51 +330,199 @@
   </div>
 </div>
 
-<!-- Power Relay Section -->
+<!-- =====================================================
+     POWER RELAY SECTION
+     ===================================================== -->
 <div class="card relay-section" id="relaySection">
   <div class="card-header">Power Relay</div>
   <div class="card-body">
-    <div class="relay-toggle-row">
-      <label for="relayToggle">Are you utilizing a four-outlet power relay?</label>
-      <select id="relayToggle" onchange="toggleRelay()">
-        <option value="no">No</option>
-        <option value="yes" selected>Yes</option>
-      </select>
-    </div>
-    <div class="relay-hint">
-      <span class="icon">(i)</span>
-      <span>If you have installed a four-outlet power relay on this device, select "Yes" to enable per-outlet power controls.</span>
+
+    <!-- ==================== SINGLE-OUTLET MODULE (Phase 1) ==================== -->
+    <div id="singleOutletModule">
+
+      <!-- Layer 2: Relay Detection -->
+      <div class="relay-detection" id="relayDetection">
+        <div class="relay-detection-header">
+          <span class="relay-detection-title">Relay Detection</span>
+          <button class="check-relay-btn" id="checkRelayBtn" onclick="checkRelay()">
+            <span class="spinner"></span>
+            <span class="btn-text">Check Relay</span>
+          </button>
+        </div>
+        <div class="relay-detection-body" id="relayDetectionBody">
+          <div class="relay-status" id="relayStatusDisplay">
+            <div class="relay-status-icon detected" id="relayIcon">&#10003;</div>
+            <div class="relay-status-text">
+              <div class="relay-status-label detected" id="relayLabel">Relay Detected</div>
+              <div class="relay-status-sub" id="relaySub">Power relay is connected to this device. Last checked: 6/3/26, 9:45 AM</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Layer 3: Gated Power Controls (shown only when relay is detected) -->
+      <div id="powerControlsWrapper">
+
+        <!-- Power Controls visible state -->
+        <div class="power-controls-module" id="powerControlsModule">
+          <div class="power-controls-header">
+            <span class="power-controls-title">Power Cycler</span>
+          </div>
+          <div class="power-single">
+            <!-- Status -->
+            <div class="power-section">
+              <div class="status-indicator on" id="singleStatusIndicator">
+                <div class="status-dot-lg on" id="singleStatusDot"></div>
+              </div>
+              <div class="pwr-info">
+                <div class="pwr-title">Power Cycler State</div>
+                <div class="pwr-value on" id="singleStatusValue">ON</div>
+                <div class="pwr-sub" id="singleStatusSub">Last check-in: 6/3/26 10:15 AM</div>
+                <div class="powered-by" id="singlePoweredBy" style="display: none;">
+                  <span class="sched-icon">&#128339;</span>
+                  <span id="singlePoweredByText">Powered ON by schedule</span>
+                </div>
+              </div>
+            </div>
+            <!-- Schedule -->
+            <div class="power-section">
+              <div class="schedule-icon" id="singleScheduleIcon">&#128339;</div>
+              <div class="pwr-info">
+                <div class="pwr-title">Power Schedule</div>
+                <div id="singleScheduleContent">
+                  <span class="schedule-none-text">No schedule</span>
+                </div>
+              </div>
+            </div>
+            <!-- Override -->
+            <div class="power-section override-info-section">
+              <div class="pwr-info">
+                <div class="pwr-title">Override Status</div>
+                <span class="override-badge-single">No Override</span>
+              </div>
+            </div>
+            <!-- Actions -->
+            <div class="power-section actions-section">
+              <div class="single-toggle-row">
+                <label class="toggle-switch">
+                  <input type="checkbox" checked id="singlePowerToggle" onchange="toggleSinglePower()">
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="single-toggle-label on" id="singleToggleLabel">ON</span>
+              </div>
+              <button class="restart-btn" id="singleRestartBtn" onclick="openSingleRestartConfirm()">Restart</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gating message (shown when relay not detected or never checked) -->
+        <div class="gating-message" id="gatingMessage" style="display: none;">
+          <span class="gating-message-icon" id="gatingIcon">&#128268;</span>
+          <div class="gating-message-text">
+            <p class="primary" id="gatingPrimary">Relay status unknown</p>
+            <p class="secondary" id="gatingSecondary">Use "Check Relay" above to verify whether a power relay is connected to this device. Power controls will appear once a relay is confirmed.</p>
+          </div>
+        </div>
+
+      </div>
     </div>
 
-    <div id="outletModule">
+    <!-- ==================== MULTI-OUTLET MODULE (Phase 2) ==================== -->
+    <div id="multiOutletModule" style="display: none;">
+      <div class="relay-toggle-row">
+        <label for="relayToggle">Are you utilizing a four-outlet power relay?</label>
+        <select id="relayToggle">
+          <option value="yes" selected>Yes</option>
+          <option value="no">No</option>
+        </select>
+      </div>
+      <div class="relay-hint">
+        <span class="icon">(i)</span>
+        <span>If you have installed a four-outlet power relay on this device, select "Yes" to enable per-outlet power controls.</span>
+      </div>
+
+      <!-- Hardware Reference Diagram -->
+      <div class="hardware-ref" id="hardwareRef">
+        <div class="hardware-ref-header" onclick="toggleHardwareRef()">
+          <span class="hardware-ref-title">
+            <span>Hardware Reference</span>
+          </span>
+          <span class="hardware-ref-toggle" id="hardwareRefToggle">Hide</span>
+        </div>
+        <div class="hardware-ref-body" id="hardwareRefBody">
+          <div class="hardware-ref-img-wrap">
+            <img src="Images/image001.png" alt="Four-outlet power relay hardware diagram">
+            <!-- Outlet markers positioned over each outlet in the image -->
+            <span class="outlet-marker" style="top: 50%; left: 34%;">1</span>
+            <span class="outlet-marker" style="top: 50%; left: 51%;">2</span>
+            <span class="outlet-marker" style="top: 50%; left: 68%;">3</span>
+            <span class="outlet-marker" style="top: 50%; left: 85%;">4</span>
+          </div>
+          <div class="hardware-ref-legend">
+            <h4>Outlet Mapping</h4>
+            <div class="legend-item">
+              <span class="legend-num">1</span>
+              <span><span class="legend-label" id="legendLabel1">ATM</span><br><span class="legend-sublabel">Leftmost outlet</span></span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-num">2</span>
+              <span><span class="legend-label" id="legendLabel2">Jukebox</span><br><span class="legend-sublabel">Center-left outlet</span></span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-num">3</span>
+              <span><span class="legend-label" id="legendLabel3">Game 1</span><br><span class="legend-sublabel">Center-right outlet</span></span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-num">4</span>
+              <span><span class="legend-label" id="legendLabel4">Outlet 4</span><br><span class="legend-sublabel">Rightmost outlet</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Restart All Bar -->
+      <div class="restart-all-bar" id="restartAllBar">
+        <div class="restart-all-info">
+          <strong>Active Outlets:</strong> <span id="activeCountText">3 of 4</span>
+          <span class="active-count-badge" id="activeCountBadge">3</span>
+        </div>
+        <button class="restart-all-btn" id="restartAllBtn" onclick="openRestartAllConfirm()">Restart All Active</button>
+      </div>
+
       <table class="outlet-table">
         <thead>
           <tr>
             <th style="width: 60px;">Outlet</th>
-            <th style="width: 160px;">Label</th>
-            <th style="width: 110px;">Status</th>
-            <th style="width: 170px;">Schedule</th>
-            <th style="width: 120px;">Power</th>
+            <th style="width: 90px;">State</th>
+            <th style="width: 150px;">Label</th>
+            <th style="width: 100px;">Status</th>
+            <th style="width: 160px;">Schedule</th>
+            <th style="width: 110px;">Power</th>
             <th style="width: 100px;">Actions</th>
           </tr>
         </thead>
         <tbody>
+          <!-- Outlet 1 — Active, ON -->
           <tr id="outletRow1">
             <td><span class="outlet-num">1</span></td>
+            <td id="outlet1StateCell">
+              <span class="active-badge in-use" id="outlet1ActiveBadge">In Use</span>
+              <button class="activate-link" id="outlet1ActiveToggle" onclick="toggleOutletActive(1)">deactivate</button>
+            </td>
             <td>
               <div class="label-cell">
                 <span class="label-text" id="outlet1Label">ATM</span>
-                <button class="edit-label-btn" onclick="openLabelEdit(1)">edit</button>
+                <button class="edit-label-btn" id="outlet1EditBtn" onclick="openLabelEdit(1)">edit</button>
               </div>
             </td>
-            <td>
+            <td id="outlet1StatusCell">
               <div class="status-cell">
                 <span class="status-dot on" id="outlet1Dot"></span>
                 <span id="outlet1StatusText">ON</span>
               </div>
             </td>
-            <td><span class="no-schedule">No schedule</span></td>
-            <td>
+            <td id="outlet1ScheduleCell"><span class="no-schedule">No schedule</span></td>
+            <td id="outlet1PowerCell">
               <div class="power-cell">
                 <label class="toggle-switch">
                   <input type="checkbox" checked id="outlet1Toggle" onchange="toggleOutlet(1)">
@@ -248,26 +531,31 @@
                 <span class="power-state-label on" id="outlet1ToggleLabel">ON</span>
               </div>
             </td>
-            <td>
+            <td id="outlet1ActionCell">
               <button class="restart-btn" id="outlet1Restart" onclick="openRestartConfirm(1)">Restart</button>
             </td>
           </tr>
+          <!-- Outlet 2 — Active, ON, has schedule -->
           <tr id="outletRow2">
             <td><span class="outlet-num">2</span></td>
+            <td id="outlet2StateCell">
+              <span class="active-badge in-use" id="outlet2ActiveBadge">In Use</span>
+              <button class="activate-link" id="outlet2ActiveToggle" onclick="toggleOutletActive(2)">deactivate</button>
+            </td>
             <td>
               <div class="label-cell">
                 <span class="label-text" id="outlet2Label">Jukebox</span>
-                <button class="edit-label-btn" onclick="openLabelEdit(2)">edit</button>
+                <button class="edit-label-btn" id="outlet2EditBtn" onclick="openLabelEdit(2)">edit</button>
               </div>
             </td>
-            <td>
+            <td id="outlet2StatusCell">
               <div class="status-cell">
                 <span class="status-dot on" id="outlet2Dot"></span>
                 <span id="outlet2StatusText">ON</span>
               </div>
             </td>
-            <td><span class="schedule-badge">8AM-10PM daily</span></td>
-            <td>
+            <td id="outlet2ScheduleCell"><span class="schedule-badge">8AM-10PM daily</span></td>
+            <td id="outlet2PowerCell">
               <div class="power-cell">
                 <label class="toggle-switch">
                   <input type="checkbox" checked id="outlet2Toggle" onchange="toggleOutlet(2)">
@@ -276,26 +564,31 @@
                 <span class="power-state-label on" id="outlet2ToggleLabel">ON</span>
               </div>
             </td>
-            <td>
+            <td id="outlet2ActionCell">
               <button class="restart-btn" id="outlet2Restart" onclick="openRestartConfirm(2)">Restart</button>
             </td>
           </tr>
+          <!-- Outlet 3 — Active, OFF, has schedule -->
           <tr id="outletRow3" class="off-row">
             <td><span class="outlet-num">3</span></td>
+            <td id="outlet3StateCell">
+              <span class="active-badge in-use" id="outlet3ActiveBadge">In Use</span>
+              <button class="activate-link" id="outlet3ActiveToggle" onclick="toggleOutletActive(3)">deactivate</button>
+            </td>
             <td>
               <div class="label-cell">
                 <span class="label-text" id="outlet3Label">Game 1</span>
-                <button class="edit-label-btn" onclick="openLabelEdit(3)">edit</button>
+                <button class="edit-label-btn" id="outlet3EditBtn" onclick="openLabelEdit(3)">edit</button>
               </div>
             </td>
-            <td>
+            <td id="outlet3StatusCell">
               <div class="status-cell">
                 <span class="status-dot off" id="outlet3Dot"></span>
                 <span id="outlet3StatusText">OFF</span>
               </div>
             </td>
-            <td><span class="schedule-badge">8AM-10PM Mon-Sat</span></td>
-            <td>
+            <td id="outlet3ScheduleCell"><span class="schedule-badge">8AM-10PM Mon-Sat</span></td>
+            <td id="outlet3PowerCell">
               <div class="power-cell">
                 <label class="toggle-switch">
                   <input type="checkbox" id="outlet3Toggle" onchange="toggleOutlet(3)">
@@ -304,86 +597,32 @@
                 <span class="power-state-label off" id="outlet3ToggleLabel">OFF</span>
               </div>
             </td>
-            <td>
+            <td id="outlet3ActionCell">
               <button class="restart-btn" id="outlet3Restart" onclick="openRestartConfirm(3)">Restart</button>
             </td>
           </tr>
-          <tr id="outletRow4" class="unknown-row">
+          <!-- Outlet 4 — Inactive -->
+          <tr id="outletRow4" class="inactive-row">
             <td><span class="outlet-num">4</span></td>
+            <td id="outlet4StateCell">
+              <span class="active-badge not-in-use" id="outlet4ActiveBadge">Not In Use</span>
+              <button class="activate-link" id="outlet4ActiveToggle" onclick="toggleOutletActive(4)">activate</button>
+            </td>
             <td>
               <div class="label-cell">
                 <span class="label-text label-default" id="outlet4Label">Outlet 4</span>
-                <button class="edit-label-btn" onclick="openLabelEdit(4)">edit</button>
+                <button class="edit-label-btn" id="outlet4EditBtn" onclick="openLabelEdit(4)" style="display:none;">edit</button>
               </div>
             </td>
-            <td>
-              <div class="status-cell">
-                <span class="status-dot unknown" id="outlet4Dot"></span>
-                <span id="outlet4StatusText">Unknown</span>
-              </div>
-            </td>
-            <td><span class="no-schedule">No schedule</span></td>
-            <td>
-              <div class="power-cell">
-                <label class="toggle-switch">
-                  <input type="checkbox" id="outlet4Toggle" onchange="toggleOutlet(4)">
-                  <span class="toggle-slider"></span>
-                </label>
-                <span class="power-state-label off" id="outlet4ToggleLabel">OFF</span>
-              </div>
-            </td>
-            <td>
-              <button class="restart-btn" id="outlet4Restart" onclick="openRestartConfirm(4)">Restart</button>
-            </td>
+            <td id="outlet4StatusCell"><span class="inactive-cell-text">—</span></td>
+            <td id="outlet4ScheduleCell"><span class="inactive-cell-text">—</span></td>
+            <td id="outlet4PowerCell"><span class="inactive-cell-text">—</span></td>
+            <td id="outlet4ActionCell"><span class="inactive-cell-text">—</span></td>
           </tr>
         </tbody>
       </table>
 
-      <div class="checkin-timestamp">Last check-in with DIO data: 5/29/26 10:15 AM</div>
-    </div>
-
-    <!-- Single-outlet view (shown when relay toggle = No) -->
-    <div id="singleOutletModule" class="single-power-module">
-      <div class="power-single">
-        <div class="power-section">
-          <div class="status-indicator on" id="singleStatusIndicator">
-            <div class="status-dot-lg on" id="singleStatusDot"></div>
-          </div>
-          <div class="pwr-info">
-            <div class="pwr-title">Power Cycler State</div>
-            <div class="pwr-value on" id="singleStatusValue">ON</div>
-            <div class="pwr-sub">Last check-in: 5/29/26 10:15 AM</div>
-          </div>
-        </div>
-        <div class="power-section">
-          <div class="schedule-icon active">&#128339;</div>
-          <div class="pwr-info">
-            <div class="pwr-title">Power Schedule</div>
-            <a href="#" class="schedule-link">Business Hours</a>
-            <div class="schedule-detail-text">
-              <span class="schedule-active-badge">Active</span>
-              &nbsp; 8:00 AM - 10:00 PM &middot; Mon-Sat &middot; ET
-            </div>
-          </div>
-        </div>
-        <div class="power-section override-info-section">
-          <div class="pwr-info">
-            <div class="pwr-title">Override Status</div>
-            <span class="override-badge-single">No Override</span>
-          </div>
-        </div>
-        <div class="power-section actions-section">
-          <div class="single-toggle-row">
-            <label class="toggle-switch">
-              <input type="checkbox" checked id="singlePowerToggle" onchange="toggleSinglePower()">
-              <span class="toggle-slider"></span>
-            </label>
-            <span class="single-toggle-label on" id="singleToggleLabel">ON</span>
-          </div>
-          <button class="restart-btn" id="singleRestartBtn2" onclick="openSingleRestartConfirm()">Restart</button>
-        </div>
-      </div>
-      <div class="checkin-timestamp" style="margin-top: 8px;">Last check-in: 5/29/26 10:15 AM</div>
+      <div class="checkin-timestamp">Last check-in with DIO data: 6/3/26 10:15 AM</div>
     </div>
 
   </div>
@@ -395,7 +634,7 @@
   <button class="action-btn">Received Support Call</button>
 </div>
 
-<!-- Restart Confirmation Modal -->
+<!-- Restart Confirmation Modal (single outlet) -->
 <div class="modal-overlay" id="restartModal">
   <div class="modal">
     <h3 id="restartModalTitle">Restart Outlet?</h3>
@@ -403,6 +642,22 @@
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeRestartConfirm()">Cancel</button>
       <button class="btn-save" onclick="confirmRestart()">Yes, Restart</button>
+    </div>
+  </div>
+</div>
+
+<!-- Restart All Confirmation Modal -->
+<div class="modal-overlay" id="restartAllModal">
+  <div class="modal">
+    <h3>Restart All Active Outlets?</h3>
+    <p style="font-size: 14px; color: #555; margin-bottom: 8px; line-height: 1.5;">
+      This will simultaneously power off all <strong><span id="restartAllCount">3</span> active outlets</strong> for 10 seconds, then power them back on.
+    </p>
+    <ul class="restart-all-list" id="restartAllList"></ul>
+    <p style="font-size: 12px; color: #999; margin-bottom: 16px;">All outlets will restart at the same time (not sequentially).</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeRestartAllConfirm()">Cancel</button>
+      <button class="btn-danger" onclick="confirmRestartAll()">Yes, Restart All</button>
     </div>
   </div>
 </div>
@@ -423,35 +678,260 @@
   let editingOutlet = null;
   let restartingOutlet = null;
 
-  function openRestartConfirm(n) {
-    restartingOutlet = n;
-    const label = document.getElementById('outlet' + n + 'Label').textContent;
-    document.getElementById('restartModalTitle').textContent = 'Restart "' + label + '" (Outlet ' + n + ')?';
-    document.getElementById('restartModalBody').textContent = 'This will power off the outlet for 10 seconds, then power it back on.';
-    document.getElementById('restartModal').classList.add('active');
-  }
+  // Track active state per outlet (multi-outlet)
+  const outletActive = { 1: true, 2: true, 3: true, 4: false };
+  const originalCells = {};
 
-  function closeRestartConfirm() {
-    document.getElementById('restartModal').classList.remove('active');
-    restartingOutlet = null;
-  }
+  // =====================================================
+  // SCENARIO MANAGEMENT
+  // =====================================================
 
-  function confirmRestart() {
-    const n = restartingOutlet;
-    closeRestartConfirm();
-    if (n === 'single') {
-      doSingleRestart();
-    } else if (n) {
-      doRestart(n);
+  function setScenario(id) {
+    // Clear all scenario button highlights
+    document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+
+    const singleModule = document.getElementById('singleOutletModule');
+    const multiModule = document.getElementById('multiOutletModule');
+
+    if (id === 'multi-outlet') {
+      singleModule.style.display = 'none';
+      multiModule.style.display = 'block';
+      document.getElementById('deviceModelDisplay').textContent = 'I-52';
+      document.getElementById('deviceConfigDisplay').textContent = 'VZW_52_Standard';
+      document.getElementById('deviceSerialDisplay').textContent = 'W52290';
+      return;
+    }
+
+    // Single-outlet scenarios
+    singleModule.style.display = 'block';
+    multiModule.style.display = 'none';
+    document.getElementById('deviceModelDisplay').textContent = 'I-22';
+    document.getElementById('deviceConfigDisplay').textContent = 'VZW_22_Standard';
+    document.getElementById('deviceSerialDisplay').textContent = 'W22105';
+
+    const detection = document.getElementById('relayDetection');
+    const controls = document.getElementById('powerControlsModule');
+    const gating = document.getElementById('gatingMessage');
+    const checkBtn = document.getElementById('checkRelayBtn');
+
+    // Reset check button
+    checkBtn.classList.remove('checking');
+    checkBtn.disabled = false;
+
+    switch (id) {
+      case 'never-checked':
+        setRelayStatus('unknown', '?', 'Relay status unknown', 'This device has never been checked for relay presence. Click "Check Relay" to verify.');
+        controls.style.display = 'none';
+        gating.style.display = 'flex';
+        document.getElementById('gatingIcon').textContent = '🔌';
+        document.getElementById('gatingPrimary').textContent = 'Relay status unknown';
+        document.getElementById('gatingSecondary').textContent = 'Use "Check Relay" above to verify whether a power relay is connected to this device. Power controls will appear once a relay is confirmed.';
+        break;
+
+      case 'checking':
+        setRelayStatus('checking', '↻', 'Checking relay...', 'Sending detection commands to device. Please wait...');
+        checkBtn.classList.add('checking');
+        checkBtn.disabled = true;
+        controls.style.display = 'none';
+        gating.style.display = 'flex';
+        document.getElementById('gatingIcon').textContent = '⏳';
+        document.getElementById('gatingPrimary').textContent = 'Detection in progress...';
+        document.getElementById('gatingSecondary').textContent = 'Sending commands to device to check for relay presence. This takes a few seconds.';
+        // Auto-transition to detected after 3 seconds
+        setTimeout(() => {
+          if (checkBtn.classList.contains('checking')) {
+            setScenarioSilent('detected-on');
+          }
+        }, 3000);
+        break;
+
+      case 'detected-on':
+        setRelayStatus('detected', '✓', 'Relay Detected', 'Power relay is connected to this device. Last checked: 6/3/26, 9:45 AM');
+        controls.style.display = 'block';
+        gating.style.display = 'none';
+        setSinglePowerState('on', false, null);
+        break;
+
+      case 'detected-off-scheduled':
+        setRelayStatus('detected', '✓', 'Relay Detected', 'Power relay is connected to this device. Last checked: 6/3/26, 9:45 AM');
+        controls.style.display = 'block';
+        gating.style.display = 'none';
+        setSinglePowerState('off', true, { name: 'Business Hours', detail: '8:00 AM - 10:00 PM &middot; Mon-Sat &middot; ET', poweredByText: 'Powered OFF by schedule at 10:00 PM' });
+        break;
+
+      case 'detected-on-scheduled':
+        setRelayStatus('detected', '✓', 'Relay Detected', 'Power relay is connected to this device. Last checked: 6/3/26, 9:45 AM');
+        controls.style.display = 'block';
+        gating.style.display = 'none';
+        setSinglePowerState('on', true, { name: 'Business Hours', detail: '8:00 AM - 10:00 PM &middot; Mon-Sat &middot; ET', poweredByText: 'Powered ON by schedule at 8:00 AM' });
+        break;
+
+      case 'not-detected':
+        setRelayStatus('not-detected', '✕', 'No Relay Detected', 'No power relay is connected to this device. Last checked: 6/3/26, 9:45 AM');
+        controls.style.display = 'none';
+        gating.style.display = 'flex';
+        document.getElementById('gatingIcon').textContent = '⚠';
+        document.getElementById('gatingPrimary').textContent = 'No relay detected on this device';
+        document.getElementById('gatingSecondary').textContent = 'Power controls are not available because no relay was found. If a relay was recently installed, click "Check Relay" to re-verify.';
+        break;
+
+      case 'check-error':
+        setRelayStatus('error', '!', 'Check Failed', 'Unable to connect to device. Ensure the device is online and try again.');
+        controls.style.display = 'none';
+        gating.style.display = 'flex';
+        document.getElementById('gatingIcon').textContent = '⚠';
+        document.getElementById('gatingPrimary').textContent = 'Relay check failed';
+        document.getElementById('gatingSecondary').textContent = 'Could not reach the device to verify relay status. The device may be offline. Try again when the device is online.';
+        break;
     }
   }
 
-  function doSingleRestart() {
-    const btn = document.getElementById('singleRestartBtn2');
+  // Silent version for auto-transitions (no button highlight change)
+  function setScenarioSilent(id) {
+    document.querySelectorAll('#singleScenarios .scenario-btn').forEach(b => b.classList.remove('active'));
+    // Find the matching button
+    document.querySelectorAll('#singleScenarios .scenario-btn').forEach(b => {
+      if ((id === 'detected-on' && b.textContent === 'Relay Detected + ON') ||
+          (id === 'not-detected' && b.textContent === 'No Relay Detected')) {
+        b.classList.add('active');
+      }
+    });
+
+    const checkBtn = document.getElementById('checkRelayBtn');
+    checkBtn.classList.remove('checking');
+    checkBtn.disabled = false;
+
+    const controls = document.getElementById('powerControlsModule');
+    const gating = document.getElementById('gatingMessage');
+
+    if (id === 'detected-on') {
+      setRelayStatus('detected', '✓', 'Relay Detected', 'Power relay is connected to this device. Last checked: 6/3/26, 9:45 AM');
+      controls.style.display = 'block';
+      gating.style.display = 'none';
+      setSinglePowerState('on', false, null);
+    }
+  }
+
+  function setRelayStatus(state, icon, label, sub) {
+    document.getElementById('relayIcon').textContent = icon;
+    document.getElementById('relayIcon').className = 'relay-status-icon ' + state;
+    document.getElementById('relayLabel').textContent = label;
+    document.getElementById('relayLabel').className = 'relay-status-label ' + state;
+    document.getElementById('relaySub').textContent = sub;
+  }
+
+  function setSinglePowerState(state, hasSchedule, schedule) {
     const indicator = document.getElementById('singleStatusIndicator');
     const dot = document.getElementById('singleStatusDot');
     const value = document.getElementById('singleStatusValue');
     const toggle = document.getElementById('singlePowerToggle');
+    const toggleLabel = document.getElementById('singleToggleLabel');
+    const poweredBy = document.getElementById('singlePoweredBy');
+    const scheduleIcon = document.getElementById('singleScheduleIcon');
+    const scheduleContent = document.getElementById('singleScheduleContent');
+
+    // Power state
+    indicator.className = 'status-indicator ' + state;
+    dot.className = 'status-dot-lg ' + state;
+    value.className = 'pwr-value ' + state;
+    value.textContent = state.toUpperCase();
+    toggle.checked = state === 'on';
+    toggleLabel.textContent = state.toUpperCase();
+    toggleLabel.className = 'single-toggle-label ' + state;
+
+    // Schedule
+    if (hasSchedule && schedule) {
+      scheduleIcon.className = 'schedule-icon active';
+      scheduleContent.innerHTML =
+        '<a href="#" class="schedule-link">' + schedule.name + '</a>' +
+        '<div class="schedule-detail-text">' +
+          '<span class="schedule-active-badge">Active</span>' +
+          '&nbsp; ' + schedule.detail +
+        '</div>';
+      poweredBy.style.display = 'flex';
+      document.getElementById('singlePoweredByText').textContent = schedule.poweredByText;
+    } else {
+      scheduleIcon.className = 'schedule-icon';
+      scheduleContent.innerHTML = '<span class="schedule-none-text">No schedule</span>';
+      poweredBy.style.display = 'none';
+    }
+  }
+
+  // =====================================================
+  // CHECK RELAY INTERACTION
+  // =====================================================
+
+  function checkRelay() {
+    const btn = document.getElementById('checkRelayBtn');
+    btn.classList.add('checking');
+    btn.disabled = true;
+
+    setRelayStatus('checking', '↻', 'Checking relay...', 'Sending detection commands to device. Please wait...');
+
+    const controls = document.getElementById('powerControlsModule');
+    const gating = document.getElementById('gatingMessage');
+    controls.style.display = 'none';
+    gating.style.display = 'flex';
+    document.getElementById('gatingIcon').textContent = '⏳';
+    document.getElementById('gatingPrimary').textContent = 'Detection in progress...';
+    document.getElementById('gatingSecondary').textContent = 'Sending commands to device to check for relay presence. This takes a few seconds.';
+
+    // Simulate detection — resolve to "detected" after 2.5 seconds
+    setTimeout(() => {
+      btn.classList.remove('checking');
+      btn.disabled = false;
+      setRelayStatus('detected', '✓', 'Relay Detected', 'Power relay is connected to this device. Last checked: ' + new Date().toLocaleString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit', hour: 'numeric', minute: '2-digit', hour12: true }));
+      controls.style.display = 'block';
+      gating.style.display = 'none';
+      setSinglePowerState('on', false, null);
+    }, 2500);
+  }
+
+  // =====================================================
+  // SINGLE-OUTLET POWER CONTROLS
+  // =====================================================
+
+  function toggleSinglePower() {
+    const toggle = document.getElementById('singlePowerToggle');
+    const indicator = document.getElementById('singleStatusIndicator');
+    const dot = document.getElementById('singleStatusDot');
+    const value = document.getElementById('singleStatusValue');
+    const label = document.getElementById('singleToggleLabel');
+    const poweredBy = document.getElementById('singlePoweredBy');
+
+    if (toggle.checked) {
+      indicator.className = 'status-indicator on';
+      dot.className = 'status-dot-lg on';
+      value.className = 'pwr-value on';
+      value.textContent = 'ON';
+      label.textContent = 'ON';
+      label.className = 'single-toggle-label on';
+    } else {
+      indicator.className = 'status-indicator off';
+      dot.className = 'status-dot-lg off';
+      value.className = 'pwr-value off';
+      value.textContent = 'OFF';
+      label.textContent = 'OFF';
+      label.className = 'single-toggle-label off';
+    }
+    poweredBy.style.display = 'none';
+  }
+
+  function openSingleRestartConfirm() {
+    document.getElementById('restartModalTitle').textContent = 'Restart Power Cycler?';
+    document.getElementById('restartModalBody').textContent = 'Are you sure you want to restart the power cycler on this device? This will power off the outlet for 10 seconds, then power it back on.';
+    restartingOutlet = 'single';
+    document.getElementById('restartModal').classList.add('active');
+  }
+
+  function doSingleRestart() {
+    const btn = document.getElementById('singleRestartBtn');
+    const indicator = document.getElementById('singleStatusIndicator');
+    const dot = document.getElementById('singleStatusDot');
+    const value = document.getElementById('singleStatusValue');
+    const toggle = document.getElementById('singlePowerToggle');
+    const poweredBy = document.getElementById('singlePoweredBy');
 
     btn.disabled = true;
     btn.textContent = 'Restarting...';
@@ -461,6 +941,7 @@
     value.className = 'pwr-value restarting';
     value.textContent = 'Restarting...';
     toggle.disabled = true;
+    poweredBy.style.display = 'none';
 
     setTimeout(() => {
       btn.disabled = false;
@@ -477,47 +958,71 @@
     }, 3000);
   }
 
-  function toggleRelay() {
-    const val = document.getElementById('relayToggle').value;
-    const multiModule = document.getElementById('outletModule');
-    const singleModule = document.getElementById('singleOutletModule');
-    if (val === 'yes') {
-      multiModule.style.display = 'block';
-      singleModule.style.display = 'none';
-    } else {
-      multiModule.style.display = 'none';
-      singleModule.style.display = 'block';
-    }
+  // =====================================================
+  // MULTI-OUTLET FUNCTIONS
+  // =====================================================
+
+  function getActiveCount() {
+    return Object.values(outletActive).filter(v => v).length;
   }
 
-  function toggleSinglePower() {
-    const toggle = document.getElementById('singlePowerToggle');
-    const indicator = document.getElementById('singleStatusIndicator');
-    const dot = document.getElementById('singleStatusDot');
-    const value = document.getElementById('singleStatusValue');
-    const label = document.getElementById('singleToggleLabel');
-    if (toggle.checked) {
-      indicator.className = 'status-indicator on';
-      dot.className = 'status-dot-lg on';
-      value.className = 'pwr-value on';
-      value.textContent = 'ON';
-      label.textContent = 'ON';
-      label.className = 'single-toggle-label on';
-    } else {
-      indicator.className = 'status-indicator off';
-      dot.className = 'status-dot-lg off';
-      value.className = 'pwr-value off';
-      value.textContent = 'OFF';
-      label.textContent = 'OFF';
-      label.className = 'single-toggle-label off';
-    }
+  function getActiveOutlets() {
+    return Object.entries(outletActive).filter(([k, v]) => v).map(([k]) => parseInt(k));
   }
 
-  function openSingleRestartConfirm() {
-    document.getElementById('restartModalTitle').textContent = 'Restart Power Cycler?';
-    document.getElementById('restartModalBody').textContent = 'Are you sure you want to restart the power cycler on this device? This will power off the outlet for 10 seconds, then power it back on.';
-    restartingOutlet = 'single';
-    document.getElementById('restartModal').classList.add('active');
+  function updateActiveCountDisplay() {
+    const count = getActiveCount();
+    document.getElementById('activeCountText').textContent = count + ' of 4';
+    document.getElementById('activeCountBadge').textContent = count;
+    document.getElementById('restartAllBtn').disabled = count === 0;
+  }
+
+  function toggleOutletActive(n) {
+    outletActive[n] = !outletActive[n];
+    const row = document.getElementById('outletRow' + n);
+    const badge = document.getElementById('outlet' + n + 'ActiveBadge');
+    const toggleBtn = document.getElementById('outlet' + n + 'ActiveToggle');
+    const editBtn = document.getElementById('outlet' + n + 'EditBtn');
+    const statusCell = document.getElementById('outlet' + n + 'StatusCell');
+    const scheduleCell = document.getElementById('outlet' + n + 'ScheduleCell');
+    const powerCell = document.getElementById('outlet' + n + 'PowerCell');
+    const actionCell = document.getElementById('outlet' + n + 'ActionCell');
+
+    if (outletActive[n]) {
+      row.className = '';
+      badge.textContent = 'In Use';
+      badge.className = 'active-badge in-use';
+      toggleBtn.textContent = 'deactivate';
+      editBtn.style.display = '';
+      if (originalCells[n]) {
+        statusCell.innerHTML = originalCells[n].status;
+        scheduleCell.innerHTML = originalCells[n].schedule;
+        powerCell.innerHTML = originalCells[n].power;
+        actionCell.innerHTML = originalCells[n].action;
+      } else {
+        statusCell.innerHTML = '<div class="status-cell"><span class="status-dot unknown" id="outlet' + n + 'Dot"></span><span id="outlet' + n + 'StatusText">Unknown</span></div>';
+        scheduleCell.innerHTML = '<span class="no-schedule">No schedule</span>';
+        powerCell.innerHTML = '<div class="power-cell"><label class="toggle-switch"><input type="checkbox" id="outlet' + n + 'Toggle" onchange="toggleOutlet(' + n + ')"><span class="toggle-slider"></span></label><span class="power-state-label off" id="outlet' + n + 'ToggleLabel">OFF</span></div>';
+        actionCell.innerHTML = '<button class="restart-btn" id="outlet' + n + 'Restart" onclick="openRestartConfirm(' + n + ')">Restart</button>';
+      }
+    } else {
+      originalCells[n] = {
+        status: statusCell.innerHTML,
+        schedule: scheduleCell.innerHTML,
+        power: powerCell.innerHTML,
+        action: actionCell.innerHTML
+      };
+      row.className = 'inactive-row';
+      badge.textContent = 'Not In Use';
+      badge.className = 'active-badge not-in-use';
+      toggleBtn.textContent = 'activate';
+      editBtn.style.display = 'none';
+      statusCell.innerHTML = '<span class="inactive-cell-text">&mdash;</span>';
+      scheduleCell.innerHTML = '<span class="inactive-cell-text">&mdash;</span>';
+      powerCell.innerHTML = '<span class="inactive-cell-text">&mdash;</span>';
+      actionCell.innerHTML = '<span class="inactive-cell-text">&mdash;</span>';
+    }
+    updateActiveCountDisplay();
   }
 
   function toggleOutlet(n) {
@@ -570,6 +1075,69 @@
     }, 3000);
   }
 
+  // =====================================================
+  // MODALS
+  // =====================================================
+
+  function openRestartConfirm(n) {
+    restartingOutlet = n;
+    const label = document.getElementById('outlet' + n + 'Label').textContent;
+    document.getElementById('restartModalTitle').textContent = 'Restart "' + label + '" (Outlet ' + n + ')?';
+    document.getElementById('restartModalBody').textContent = 'This will power off the outlet for 10 seconds, then power it back on.';
+    document.getElementById('restartModal').classList.add('active');
+  }
+
+  function closeRestartConfirm() {
+    document.getElementById('restartModal').classList.remove('active');
+    restartingOutlet = null;
+  }
+
+  function confirmRestart() {
+    const n = restartingOutlet;
+    closeRestartConfirm();
+    if (n === 'single') {
+      doSingleRestart();
+    } else if (n) {
+      doRestart(n);
+    }
+  }
+
+  function openRestartAllConfirm() {
+    const active = getActiveOutlets();
+    if (active.length === 0) return;
+    document.getElementById('restartAllCount').textContent = active.length;
+    const list = document.getElementById('restartAllList');
+    list.innerHTML = '';
+    active.forEach(n => {
+      const label = document.getElementById('outlet' + n + 'Label').textContent;
+      const dot = document.getElementById('outlet' + n + 'Dot');
+      const dotClass = dot ? dot.className : 'status-dot on';
+      const li = document.createElement('li');
+      li.innerHTML = '<span class="' + dotClass + '"></span> Outlet ' + n + ': ' + label;
+      list.appendChild(li);
+    });
+    document.getElementById('restartAllModal').classList.add('active');
+  }
+
+  function closeRestartAllConfirm() {
+    document.getElementById('restartAllModal').classList.remove('active');
+  }
+
+  function confirmRestartAll() {
+    closeRestartAllConfirm();
+    const active = getActiveOutlets();
+    const btn = document.getElementById('restartAllBtn');
+    btn.disabled = true;
+    btn.textContent = 'Restarting All...';
+    btn.className = 'restart-all-btn restarting';
+    active.forEach(n => doRestart(n));
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.textContent = 'Restart All Active';
+      btn.className = 'restart-all-btn';
+    }, 3000);
+  }
+
   function openLabelEdit(n) {
     editingOutlet = n;
     const currentLabel = document.getElementById('outlet' + n + 'Label').textContent;
@@ -597,12 +1165,40 @@
       }
     }
     closeLabelEdit();
+    updateLegendLabels();
   }
 
   document.getElementById('labelInput').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') saveLabelEdit();
     if (e.key === 'Escape') closeLabelEdit();
   });
+
+  // Hardware Reference toggle
+  function toggleHardwareRef() {
+    const body = document.getElementById('hardwareRefBody');
+    const toggle = document.getElementById('hardwareRefToggle');
+    if (body.classList.contains('collapsed')) {
+      body.classList.remove('collapsed');
+      toggle.textContent = 'Hide';
+    } else {
+      body.classList.add('collapsed');
+      toggle.textContent = 'Show';
+    }
+  }
+
+  // Update legend labels when outlet labels change
+  function updateLegendLabels() {
+    for (let i = 1; i <= 4; i++) {
+      const legendEl = document.getElementById('legendLabel' + i);
+      const outletEl = document.getElementById('outlet' + i + 'Label');
+      if (legendEl && outletEl) {
+        legendEl.textContent = outletEl.textContent;
+      }
+    }
+  }
+
+  // Initialize
+  updateActiveCountDisplay();
 </script>
 
 </body>
