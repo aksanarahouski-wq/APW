@@ -1,10 +1,10 @@
-# Configuration Engine V2 — Requirements
+# Configuration Engine V1 — Requirements
 
 ## Overview
 
-The Configuration Engine V2 replaces the current file-based configuration system with a schema-driven parameter management system. Instead of uploading configuration files per device model/carrier/service plan combination, administrators define parameters in a central schema and configure values through a layered inheritance model.
+The Configuration Engine V1 replaces the current file-based configuration system with a schema-driven parameter management system. Instead of uploading configuration files per device model/carrier/service plan combination, administrators define parameters in a central schema and configure values through a layered inheritance model.
 
-The current system manages approximately 700 configuration parameters. This document defines the scope, architecture, and requirements for the V2 implementation based on client discussions (Meeting 2, March 2026).
+The current system manages approximately 700 configuration parameters. This document defines the scope, architecture, and requirements for the V1 implementation based on client discussions (Meeting 2, March 2026).
 
 ---
 
@@ -42,7 +42,7 @@ The schema is the single source of truth for all configuration parameters. It re
 - Null defaults mean the parameter must be explicitly set at a lower level (or left unconfigured)
 - Administered via a new admin page ("Grand Schema")
 
-> **Note:** There is an outstanding open question related to schema versioning — see [Open Questions](#open-questions) #3.
+> **Decision:** Schema is append-only for MVP. Parameters cannot be removed from the schema. If removal is ever needed, the client will consult with the dev team. (Source: Adam, Confluence Apr 17 2026)
 
 **Parameter metadata (per schema entry):**
 
@@ -84,7 +84,7 @@ Some parameters are model-specific but constant across all carrier/service plan 
 
 A single configuration screen where administrators select a Model + Carrier + one or more Service Plans and set parameter values that apply to that combination.
 
-> **Note:** The legacy system uses a 4th matching dimension (Cellular Backup) that is not included in the 3-way rule. The decision is to absorb cellular backup as a schema parameter rather than a matching dimension — see [Open Questions](#open-questions) #8 for client confirmation needed.
+> **Decision:** Cellular backup is NOT a matching dimension. The legacy system used it as a 4th criterion, but APW stopped utilizing that flag and switched to a customer-driven, device-page-initiated approach. The 3-way rule (Model + Carrier + Service Plan) is confirmed correct. (Source: Adam, Confluence Apr 17 2026)
 
 **Prerequisites:**
 - The model must be flagged as "is configurable" (see Model Configuration below)
@@ -152,7 +152,7 @@ Each override set defines which devices it applies to using three scope selector
 
 **Parameter list availability:**
 - When the override set specifies a **specific model**: the parameter list comes from that model's selected parameters (same as today). Only parameters selected for that model can be overridden.
-- When the override set specifies **Any model**: the parameter list is all schema parameters flagged as `available_at_company = true`. Since there is no single model to inherit from, the schema flag controls which parameters are available. At resolution time, only parameters that belong to the device's actual model are applied — others are silently ignored. *(See [Open Questions](#open-questions) #7 — should the editor surface which models each parameter applies to?)*
+- When the override set specifies **Any model**: the parameter list is all schema parameters flagged as `available_at_company = true`. Since there is no single model to inherit from, the schema flag controls which parameters are available. At resolution time, only parameters that belong to the device's actual model are applied — others are silently ignored. *(Open question: should the editor surface which models each parameter applies to? See Open_Questions.md Q2.)*
 
 **Key behavior:**
 - An override set can be assigned to one company (unique override) or many companies (shared override).
@@ -170,7 +170,15 @@ When a distributor company is assigned an override set, an "Apply to sub-compani
 - **Re-link:** An unlinked sub-company can be put back on the parent's override set.
 - **Own override set:** A sub-company can be assigned a different override set while the parent's "apply to sub-companies" is active. This acts as an implicit unlink — the sub-company's explicit assignment wins over the parent's inheritance.
 - **No nesting:** The system does not support nested distributor hierarchies. Inheritance is one level only: distributor → direct sub-companies.
-- **Scope filtering at resolution time:** Inheritance is blanket — all sub-companies inherit the assignment. Whether the override set actually affects a sub-company's devices depends on scope matching at resolution time (e.g., if the override set is scoped to Verizon, only Verizon devices in the sub-company are affected). The UI should show effective device reach (e.g., "applies to 12 of 47 devices"). *(See [Open Questions](#open-questions) #9 — is this level of detail sufficient?)*
+- **Scope filtering at resolution time:** Inheritance is blanket — all sub-companies inherit the assignment. Whether the override set actually affects a sub-company's devices depends on scope matching at resolution time (e.g., if the override set is scoped to Verizon, only Verizon devices in the sub-company are affected). The UI should show effective reach as **companies**, not devices (e.g., "applies to 12 of 47 companies"). (Source: Adam, Confluence Apr 17 2026)
+
+**Build vs. Assign Separation:**
+
+Override set lifecycle is split into two distinct phases: **building** (defining scope + parameters + values) and **assigning** (attaching companies). This separation enables clean conflict validation.
+
+- **Building** — An override set can be created and edited without any company assignments. An unassigned override set is inactive — it has no effect on any device. No validation is needed during the build phase because there are no companies to validate against.
+- **Assigning** — Companies are attached to an override set one at a time. Each assignment triggers conflict validation against that specific company's existing override sets. This is the enforcement point.
+- **Minimum assignment** — An override set with no companies assigned is valid but inactive. It will not be compiled or pushed to any device. This allows admins to build and review override sets before activating them.
 
 **Conflict Detection (at assignment time):**
 
@@ -200,11 +208,18 @@ Scope overlap is determined by comparing each selector:
 
 **Conflict Detection (on override set edits):**
 
-Conflict detection also applies when editing an existing override set — not just at assignment time. When an admin adds a new parameter to an override set that is already assigned to companies, the system checks all assigned companies for new conflicts before allowing the save. If the new parameter would conflict with another override set for any assigned company, the edit is **blocked** with an error identifying the conflicting company, override set, and parameter.
+When editing an override set that already has companies assigned (changing parameters, values, or scope), the edit saves successfully — the override set itself is always valid. After saving, the system runs a re-validation across all assigned companies:
 
-This means editing a widely-used override set (e.g., assigned to 50 companies) triggers conflict checks against all 50 companies' other override sets. The save may be rejected due to a conflict the admin wasn't aware of in a company they weren't thinking about.
+1. For each assigned company, check their OTHER override sets for parameter + scope overlap against the updated set.
+2. If conflicts are found, the conflicting companies are flagged in a validation report showing: which company, which parameter conflicts, and which other override set causes the conflict.
+3. Flagged companies remain assigned but are marked as "conflict — needs resolution." The override set will not be compiled or pushed for those companies until the conflict is resolved.
+4. The admin must resolve conflicts by either: editing one of the conflicting override sets to remove the parameter overlap, or unassigning the company from one of the conflicting sets.
 
-> **Note:** There are outstanding open questions related to conflict detection UX and soft conflicts — see [Open Questions](#open-questions) #4 and #5.
+This approach allows edits without blocking — the admin can save their work and resolve conflicts as a separate step, rather than being blocked from saving by a conflict in a company they weren't thinking about.
+
+**Conflict Detection (on scope changes):**
+
+Changing an override set's scope (e.g., narrowing from Any + Any + Any to I-22 + Any + Any) follows the same re-validation flow. A scope change can either create new conflicts (widening scope) or resolve existing ones (narrowing scope). The system re-validates all assigned companies after any scope change.
 
 **Where it's managed:**
 - **Configuration Admin Section:** Primary management — create, edit, browse override sets. View which companies are assigned to each set.
@@ -221,7 +236,7 @@ Device-level parameter overrides. Limited scope — primarily customer-facing se
 - Limited set of parameters (Wi-Fi, cellular settings, etc.)
 - Customers can modify these themselves
 - Most parameters are NOT available at this level — only those explicitly allowed
-- This level already exists in the current system and remains largely unchanged for V2 scope
+- This level already exists in the current system and remains largely unchanged for V1 scope
 
 ---
 
@@ -229,23 +244,23 @@ Device-level parameter overrides. Limited scope — primarily customer-facing se
 
 ### Overview
 
-The V2 configuration engine and the legacy file-based configuration system (.DAT files) will coexist for an extended transition period. Devices will be manually moved from the old system to the new system one at a time. During this period, the device page must support previewing configurations from both systems and clearly indicate which system a device is using.
+The V1 configuration engine and the legacy file-based configuration system (.DAT files) will coexist for an extended transition period. Devices will be manually moved from the old system to the new system one at a time. During this period, the device page must support previewing configurations from both systems and clearly indicate which system a device is using.
 
 ### Configuration Source Selector
 
 Each device needs a setting indicating which configuration system it uses:
 
 - **Legacy Configuration** — the device uses the current file-based system (.DAT files uploaded per model/carrier/service plan, with custom company configuration files and device-level `custom_configurations` JSON overrides)
-- **V2 Configuration** — the device uses the new schema-driven configuration engine (schema defaults → model defaults → 3-way rule → company override set → device overrides)
+- **V1 Configuration** — the device uses the new schema-driven configuration engine (schema defaults → model defaults → 3-way rule → company override set → device overrides)
 
 **Key behavior:**
 - The selector is a per-device setting, stored on the device record
-- An admin manually switches a device to "V2" when the new configuration has been fully built in the V2 engine for that device's model/carrier/service plan combination
-- No automated migration — configurations are manually built in the V2 engine, and devices are switched over one at a time (no bulk migration path — intentionally conservative)
+- An admin manually switches a device to "V1" when the new configuration has been fully built in the V1 engine for that device's model/carrier/service plan combination
+- No automated migration — configurations are manually built in the V1 engine, and devices are switched over one at a time (no bulk migration path — intentionally conservative)
 - Both systems remain fully operational during the transition period — switching the selector does not delete or modify the device's legacy configuration files
 - Switching back to Legacy is always possible since legacy files are preserved
 
-> **Note:** There is an outstanding open question about the migration path from legacy configs — see [Open Questions](#open-questions) #1.
+> **Decision:** Migration is manual, one company/device at a time. Existing configs stay as-is until rebuilt in V1. No automated migration tooling for MVP. (Source: Adam, Confluence Mar 27 + Apr 16 2026)
 
 ### Device Page Configuration Preview
 
@@ -255,22 +270,22 @@ The device page must be able to preview the device's configuration from both sys
 - A read-only preview of the compiled .DAT file content — showing the key-value pairs from the legacy file after all legacy layers are applied (base config file + custom company config + device custom_configurations)
 - This is a temporary preview built to give visibility into the legacy configuration while the old system is still in use
 
-**V2 Configuration Preview:**
-- The fully resolved configuration from the V2 engine: all schema parameters resolved through all 5 levels (schema default → model default → 3-way rule → company override set → device override)
+**V1 Configuration Preview:**
+- The fully resolved configuration from the V1 engine: all schema parameters resolved through all 5 levels (schema default → model default → 3-way rule → company override set → device override)
 - Uses the same preview pattern as the 3-way rule and override set editors, but resolved through all levels including device overrides
 - Each parameter shows its final value and source layer (color-coded badge: schema default, model default, 3-way rule, company override, device override)
 - Support the same filters: search, show only overridden, show only missing required
 - Support export to key-value format
 
 **Visual indicator on device page:**
-- The current configuration source should be prominently displayed (e.g., a dropdown or radio selection: "Legacy" or "V2 Engine")
+- The current configuration source should be prominently displayed (e.g., a dropdown or radio selection: "Legacy" or "V1 Engine")
 - The active preview corresponds to whichever system the device is set to use
 
 **Side-by-Side Comparison:**
 - Both configuration systems always render a configuration for the device — the source selector only determines which one is actually applied
-- A comparison view shows legacy and V2 configurations side by side, with match/difference indicators per parameter
+- A comparison view shows legacy and V1 configurations side by side, with match/difference indicators per parameter
 - This allows the admin to see exactly how the two systems differ for this device, regardless of which one is active
-- Useful for verifying V2 configuration completeness before switching a device over, and for ongoing auditing
+- Useful for verifying V1 configuration completeness before switching a device over, and for ongoing auditing
 
 ---
 
@@ -324,7 +339,7 @@ For each parameter in the device's model parameter list:
   6. Result = final compiled value
 ```
 
-If a parameter is mandatory (per schema) and still null after resolution, this should be flagged as a configuration error. *(See [Open Questions](#open-questions) #2 — enforcement timing is TBD.)*
+If a parameter is mandatory (per schema) and still null after resolution, this should be flagged as a configuration error. Mandatory parameter enforcement happens at the time MCS Rules are published. (Source: Adam, Confluence Apr 17 2026)
 
 **Missing 3-Way Rule:** If no 3-way rule exists for a device's model + carrier + service plan combination, Level 3 is a pass-through — the resolution continues with schema defaults and model defaults, then applies any matching company override sets and device overrides. This is a valid state, not an error. However, the device's configuration preview should indicate that no 3-way rule exists for this combination (e.g., a notice: "No 3-way rule configured for I-22 + T-Mobile + Standard").
 
@@ -459,7 +474,7 @@ When a device's attributes change, the resolved configuration may shift — a di
 - **Company reassignment** — entirely different set of override sets applies
 - **Model change** (rare — device replacement scenarios) — different model defaults, parameter list, 3-way rule, and model-scoped override sets
 
-Recompilation updates the device's configuration preview on the device page. Once config push is implemented, recompilation would also trigger the delivery pipeline to push the updated config to the device. *(See [Open Questions](#open-questions) #10 — should admins see a change summary when recompilation occurs?)*
+Recompilation updates the device's configuration preview on the device page. Once config push is implemented, recompilation would also trigger the delivery pipeline to push the updated config to the device. Admins should see a summary of what changed when recompilation occurs, and historical changes should be tracked in a change log / audit trail. (Source: Adam, Confluence Apr 17 2026)
 
 ---
 
@@ -505,7 +520,7 @@ The Configuration Management landing page may also show a "Recent Activity" feed
 |--------|---------|
 | Grand Schema | Define all parameters with defaults, types, validation |
 | Model Configuration | Per-model parameter selection + model default values |
-| Company Override Sets | Create, edit, browse named override sets. View company assignments per set. *(See [Open Questions](#open-questions) #6 — browse/filter UX is TBD.)* |
+| Company Override Sets | Create, edit, browse named override sets. View company assignments per set. Browse page includes assignment status column and conflict indicators. |
 
 ### Modified Screens
 
@@ -519,11 +534,11 @@ The Configuration Management landing page may also show a "Recent Activity" feed
 
 | Screen | Changes |
 |--------|---------|
-| Device Edit/View | Add configuration source selector (Legacy vs. V2). Show legacy .DAT preview when on Legacy. Show full 5-level resolved configuration preview with source layer badges when on V2. |
+| Device Edit/View | Add configuration source selector (Legacy vs. V1). Show legacy .DAT preview when on Legacy. Show full 5-level resolved configuration preview with source layer badges when on V1. |
 
 ---
 
-## Out of Scope (V2)
+## Out of Scope (V1)
 
 Items discussed but explicitly deferred:
 
@@ -538,24 +553,7 @@ Items discussed but explicitly deferred:
 
 ## Open Questions
 
-1. **Migration path:** How do existing config files map to the new schema? Is there a migration, or do existing configs stay as-is until they're rebuilt in V2? *(Affects: Device-Level Configuration Rendering and Legacy Coexistence)*
-2. **Mandatory parameter enforcement:** When should mandatory-but-null parameters be flagged? At config creation time? At device provisioning time? Both? *(Affects: Resolution Logic)*
-3. **Schema versioning:** If a parameter is removed from the schema, what happens to existing 3-way rules and override sets that reference it? *(Affects: Level 1 — Grand Schema, Level 3 — 3-Way Rules, Level 4 — Override Sets)*
-4. **Conflict detection UX:** What is the UX for the conflict detection error? Should it show a detailed breakdown (which parameters conflict, which override set, which scope dimensions overlap) or just a summary? This also applies to conflict detection on override set *edits* — editing a widely-used override set (e.g., assigned to 50 companies) triggers conflict checks against all assigned companies' other override sets. The save could be rejected because of a conflict with one company the admin wasn't thinking about. Should there be a way to preview and resolve conflicts before committing? *(Affects: Level 4 — Conflict Detection)*
-5. **Soft conflicts:** Should the system allow "soft conflicts" where the admin can acknowledge and override the conflict check? Current decision: no — strict rejection. *(Affects: Level 4 — Conflict Detection)*
-6. **Override set browse/filter UI:** How does the override set browse/filter UI work now that sets are not grouped by 3-way rule? *(Affects: Screens / UI Changes)*
-7. **Silent parameter filtering for "Model = Any" override sets:** When an override set is scoped to "Any model," parameters that don't belong to a specific device's model are silently dropped at resolution time. For example, an admin sets `io_enable = 1` in a Model=Any override set — the I-22 has `io_enable` but the 4100 does not, so the 4100 silently ignores it. Should the override set editor show which models each parameter actually applies to? Or is the device-level config preview sufficient? Related: should the system surface non-configurable devices (models not flagged as "is configurable") on the company page (e.g., "12 devices not covered by config engine")? *(Affects: Level 4 — Override Sets, Model Configuration)*
-8. **Cellular backup as a matching dimension:** The legacy system matches configs on 4 criteria: Model + Carrier + Service Plan + Cellular Backup. V2 uses a 3-way rule (Model + Carrier + Service Plan) with cellular backup absorbed as a schema parameter. Are there configs today where cellular backup fundamentally changes the config shape (not just a few parameter values)? If so, absorbing it as a parameter may not be sufficient. Need Adam to confirm. *(Affects: Level 3 — 3-Way Rules)*
-9. **Distributor inheritance granularity:** When a distributor assigns an override set with "Apply to sub-companies," the UI shows effective device reach (e.g., "applies to 12 of 47 devices"). Is this level of detail sufficient? Or does Devon need more granularity (e.g., which specific devices are/aren't affected)? *(Affects: Level 4 — Distributor Sub-Company Inheritance)*
-10. **Auto-recompile notification:** When a device's attributes change and the config recompiles, should the admin see a summary of what changed (e.g., "Carrier changed from Verizon to T-Mobile — 14 parameter values changed")? Or is it sufficient that the device page preview updates automatically? *(Affects: Automatic Recompilation on Device Attribute Changes)*
-
-**Resolved questions (preserved for history):**
-
-- ~~**Parameter import:**~~ → Resolved. The initial ~700 schema parameters and initial rules will be seeded directly into the database by the dev team, not entered through the UI.
-- ~~**Company config linking:**~~ → Resolved. Override sets replace company-to-company linking. One set, many companies. Edits propagate automatically.
-- ~~**Sub-company unlink behavior:**~~ → Resolved. See Distributor Sub-Company Inheritance under Level 4.
-- ~~**Override set cross-3-way-rule reuse:**~~ → Resolved. Override sets now have their own scope with "Any" option. See Level 4.
-- ~~**`available_at_company` flag:**~~ → Resolved. Decision: Keep the flag — it serves both as a guardrail and as the parameter source for model-agnostic override sets.
+All open questions and client feedback are tracked in `Open_Questions.md`. See that file for the full list of open items, answered-but-not-yet-applied client responses, and design questions needing internal decisions.
 
 ---
 
@@ -593,7 +591,7 @@ Items discussed but explicitly deferred:
 - **Option 1 (chosen): Strict no-overlap.** No two override sets assigned to the same company can contain the same parameter for overlapping device scopes. Conflicts are rejected at assignment time.
 - Option 2 (deferred): Specificity-based resolution where more-specific scopes win over less-specific. This adds power but also complexity. May be reconsidered in a future version if strict no-overlap proves too limiting in practice.
 
-*This change introduced open questions #4, #5, and #6 — see [Open Questions](#open-questions).*
+*This change introduced questions about conflict detection UX, soft conflicts, and browse/filter UI — these have since been resolved. See Open_Questions.md for details.*
 
 ### Version 3 — Requirements Review Gap Fixes (April 12, 2026)
 
@@ -637,3 +635,25 @@ Items discussed but explicitly deferred:
 | Documented review decisions inline | Added: manual per-model parameter selection (D), per-device migration with no bulk switch (G), no change reason field (H), equal admin access (I), manual 3-way rule splitting (L), reverse lookup deferred (N). |
 | Removed V1 comparison content | Removed "Design decisions — what was removed from V1 and why" block from Level 1 schema section. |
 | Retired Outstanding_Client_Questions.md | All content merged into this document. |
+
+### Version 6 — Build vs. Assign Separation for Override Sets (July 19, 2026)
+
+**Decision:** Override set lifecycle is split into two distinct phases: building (defining scope + parameters + values) and assigning (attaching companies). Conflict validation is separated accordingly.
+
+**Source:** Internal design review analyzing real company config data (Altech, Cord, Baum override analysis against Verizon I-22 base rule). Analysis revealed 15-35 parameter overrides per company with significant parameter key overlap across companies but different values — confirming the many-to-many relationship complexity.
+
+**What changed:**
+
+| Area | Before | After |
+|------|--------|-------|
+| Override set creation | Required company context or implied immediate assignment | Override sets can be built independently with no companies. Unassigned sets are inactive. |
+| Conflict validation on build | Edits blocked if any assigned company would have a conflict | Edits always save. Re-validation runs after save, flagging conflicting companies. |
+| Conflict validation on assign | Checked at assignment time | Unchanged — still checked per-company at assignment time. |
+| Conflicting companies after edit | Edit blocked entirely | Flagged as "conflict — needs resolution." Override set not compiled/pushed for those companies until resolved. |
+| Scope change validation | Implicitly part of edit blocking | Explicit re-validation after scope changes. Narrowing scope may resolve existing conflicts. |
+
+**What did NOT change:**
+- Conflict detection logic (scope overlap + parameter overlap) is unchanged
+- Assignment examples (allowed, rejected) are unchanged
+- The 5-level hierarchy order is unchanged
+- Override set scoping with "Any" option is unchanged

@@ -1,4 +1,4 @@
-# Configuration Engine V2 — Prototype Build Prompts
+# Configuration Engine V1 — Prototype Build Prompts
 
 Step-by-step prompts for building the Configuration Management administrative area prototype. Each prompt builds on the previous phase. Feed these into your lab environment sequentially.
 
@@ -813,7 +813,7 @@ These prompts add configuration framework visibility and preview capabilities to
 ## Prompt P4.1 — Device Page: Configuration Source Selector and Indicator
 
 ```
-Add a configuration source selector to the device detail/edit page. This tells the admin which configuration framework (Legacy or V2) the device is currently using, and allows the admin to manually switch between them.
+Add a configuration source selector to the device detail/edit page. This tells the admin which configuration framework (Legacy or V1) the device is currently using, and allows the admin to manually switch between them.
 
 **Placement:**
 Add the configuration source selector near the top of the device detail page, below the device header/identification info but above the main content area. This should be clearly visible.
@@ -822,7 +822,7 @@ Add the configuration source selector near the top of the device detail page, be
 
 A dropdown or radio button group with two options:
 - "Legacy (.DAT File)"
-- "V2 Configuration Engine"
+- "V1 Configuration Engine"
 
 Next to the selector, show contextual info based on the current selection:
 
@@ -830,21 +830,21 @@ When set to Legacy:
 - Show the config file reference (e.g., "File: VZW_22_01282025.dat")
 - Small badge: "Legacy" in amber/yellow
 
-When set to V2 Engine:
+When set to V1 Engine:
 - Show the resolved 3-way rule (e.g., "Rule: I-22 + Verizon + [ATM, Standard]")
 - Show the company override set if any (e.g., "Override Set: Cord Financial RMS Access" or "No override set")
-- Small badge: "V2" in teal/green
+- Small badge: "V1" in teal/green
 
 **Selector behavior:**
 - Changing the selection simply updates the device's configuration source flag. No migration workflow, no prerequisites check — the admin manually decides when a device is ready to switch.
-- The Configuration tab/section below updates to show the corresponding preview (Legacy or V2) based on the current selection.
+- The Configuration tab/section below updates to show the corresponding preview (Legacy or V1) based on the current selection.
 - Switching back to Legacy is always allowed.
 
 **Sample device data for prototype:**
 Create 3-4 sample devices that can be navigated between (tabs, dropdown, or a small device list):
 - Device "ATM-VZW-001" — Legacy, File: VZW_22_01282025.dat, Company: Cord Financial
-- Device "ATM-VZW-002" — V2 Engine, Rule: I-22 + Verizon + [ATM, Standard], Override Set: Cord Financial RMS Access, Company: Cord Financial
-- Device "ATM-TMO-003" — V2 Engine, Rule: I-22 + T-Mobile + [ATM], Override Set: none, Company: Loaded ATMs
+- Device "ATM-VZW-002" — V1 Engine, Rule: I-22 + Verizon + [ATM, Standard], Override Set: Cord Financial RMS Access, Company: Cord Financial
+- Device "ATM-TMO-003" — V1 Engine, Rule: I-22 + T-Mobile + [ATM], Override Set: none, Company: Loaded ATMs
 - Device "ATM-VZW-004" — Legacy, File: VZW_4100_02152025.dat, Company: Miele
 ```
 
@@ -888,15 +888,15 @@ Populate with sample data — ~30-40 visible parameters across categories with a
 
 ---
 
-## Prompt P4.3 — Device Page: V2 Configuration Preview
+## Prompt P4.3 — Device Page: V1 Configuration Preview
 
 ```
-When the device's configuration source is set to "V2 Configuration Engine", show the V2 configuration preview in the same "Configuration" section/tab. This is the FINAL and COMPLETE resolution — all 5 levels of the hierarchy are resolved, including device-level overrides. This is what would be pushed to the device.
+When the device's configuration source is set to "V1 Configuration Engine", show the V1 configuration preview in the same "Configuration" section/tab. This is the FINAL and COMPLETE resolution — all 5 levels of the hierarchy are resolved, including device-level overrides. This is what would be pushed to the device.
 
 **Header area:**
-- Title: "Device Configuration (V2 Engine)"
+- Title: "Device Configuration (V1 Engine)"
 - Subtitle: "Fully resolved configuration for [device name]"
-- Badge: "V2 Engine" in teal/green
+- Badge: "V1 Engine" in teal/green
 - Context info (read-only):
   - Model: I-22 (CalAmp)
   - Carrier: Verizon
@@ -990,7 +990,7 @@ Export:
 - "Export as CSV" button — all 697 rows with columns: parameter_name, display_name, final_value, source_layer, category, in_model
 - "Export as JSON" button — structured export with full resolution chain per parameter
 
-Populate with sample data for a V2 device showing a realistic mix:
+Populate with sample data for a V1 device showing a realistic mix:
 - ~400 parameters at Schema Default (gray) — the bulk of the config
 - ~50 parameters at Model Default (blue) — model-specific constants
 - ~40 parameters at 3-Way Rule (green) — carrier/service plan specific
@@ -1001,20 +1001,20 @@ Populate with sample data for a V2 device showing a realistic mix:
 
 ---
 
-## Prompt P4.4 — Device Page: Side-by-Side Legacy vs. V2 Comparison
+## Prompt P4.4 — Device Page: Side-by-Side Legacy vs. V1 Comparison
 
 ```
-Add a "Compare Legacy vs. V2" view to the device Configuration section/tab. Both configuration frameworks render a configuration for this device at all times — the device source selector only determines which one is actually applied. This comparison view lets the admin see both rendered configurations side by side to understand the differences.
+Add a "Compare Legacy vs. V1" view to the device Configuration section/tab. Both configuration frameworks render a configuration for this device at all times — the device source selector only determines which one is actually applied. This comparison view lets the admin see both rendered configurations side by side to understand the differences.
 
 **Access:**
-A "Compare Legacy vs. V2" button on the device Configuration tab, always visible regardless of which configuration source the device is currently set to.
+A "Compare Legacy vs. V1" button on the device Configuration tab, always visible regardless of which configuration source the device is currently set to.
 
 **Layout:**
 Opens as a full-width view (can be inline on the page or a full-screen modal). Two-column side-by-side comparison:
 
-| Left Column: Legacy Configuration | Right Column: V2 Configuration |
+| Left Column: Legacy Configuration | Right Column: V1 Configuration |
 |-----------------------------------|-------------------------------|
-| Header: "Legacy (.DAT File)" with amber badge | Header: "V2 Engine" with teal badge |
+| Header: "Legacy (.DAT File)" with amber badge | Header: "V1 Engine" with teal badge |
 | File: VZW_22_01282025.dat | Rule: I-22 + Verizon + [ATM, Standard] |
 | | Override Set: Cord Financial RMS Access |
 
@@ -1029,30 +1029,30 @@ A single merged table where each row shows the same parameter from both systems:
 | Category | For grouping |
 | Legacy Value | Value from the compiled legacy configuration |
 | Legacy Source | Base Config / Company Config / Device Override |
-| V2 Value | Value from the V2 engine resolution |
-| V2 Source | Schema Default / Model Default / 3-Way Rule / Company Override / Device Override |
+| V1 Value | Value from the V1 engine resolution |
+| V1 Source | Schema Default / Model Default / 3-Way Rule / Company Override / Device Override |
 | Match | Visual indicator: ✓ (green check) if values are identical, ✗ (red X) if different, ⚠ (yellow warning) if parameter exists in one system but not the other |
 
 **Row highlighting:**
 - Matching values: no highlight (default/white background)
 - Different values: light red/pink background — draws attention to discrepancies
-- Parameter only in Legacy (not in V2 schema): light yellow background with note "Not in V2 schema"
-- Parameter only in V2 (new schema parameter not in legacy file): light blue background with note "New in V2"
+- Parameter only in Legacy (not in V1 schema): light yellow background with note "Not in V1 schema"
+- Parameter only in V1 (new schema parameter not in legacy file): light blue background with note "New in V1"
 
 **Summary stats bar:**
 - Total parameters compared: X
 - Matching: X (green)
 - Different: X (red)
 - Only in Legacy: X (yellow)
-- Only in V2: X (blue)
+- Only in V1: X (blue)
 - Match rate: X%
 
 **Filters/toggles:**
 - "Show all" (default)
 - "Show only differences" — hides matching parameters, focuses on discrepancies
 - "Show only matching" — confirms what's aligned
-- "Show only in Legacy" — parameters in legacy but not V2
-- "Show only in V2" — parameters in V2 but not legacy
+- "Show only in Legacy" — parameters in legacy but not V1
+- "Show only in V1" — parameters in V1 but not legacy
 - Search by parameter name
 - Group by category with collapsible sections
 
@@ -1063,13 +1063,13 @@ A single merged table where each row shows the same parameter from both systems:
 
 ---
 
-## Prompt P4.5 — Device Page V2 Configuration: Preview Button
+## Prompt P4.5 — Device Page V1 Configuration: Preview Button
 
 ```
-Add a "Preview Configuration" button to the Device Configuration view when the device is on the V2 Configuration Engine. This follows the same preview pattern used on the 3-Way Rule editor (P3.1) and Company Override Set editor (P3.3), but resolves through ALL 5 levels — this is the deepest and final resolution in the hierarchy.
+Add a "Preview Configuration" button to the Device Configuration view when the device is on the V1 Configuration Engine. This follows the same preview pattern used on the 3-Way Rule editor (P3.1) and Company Override Set editor (P3.3), but resolves through ALL 5 levels — this is the deepest and final resolution in the hierarchy.
 
 **Button placement:**
-- Add a "Preview Configuration" button in the header area of the V2 configuration section on the device page, near the context info (model, carrier, service plan, company, override set).
+- Add a "Preview Configuration" button in the header area of the V1 configuration section on the device page, near the context info (model, carrier, service plan, company, override set).
 - Style it identically to the preview buttons on the 3-way rule and override set editors (secondary/outline button with eye/preview icon).
 
 **Preview display:**
@@ -2106,14 +2106,14 @@ Show the matching override sets table, then the parameter table where:
 
 ---
 
-## Prompt P8.5 — Update Device Page V2 Preview for Multiple Override Sets
+## Prompt P8.5 — Update Device Page V1 Preview for Multiple Override Sets
 
 ```
-Update the Device Page V2 Configuration Preview (Prompt P4.3) and the V2 Configuration section context info to reflect the new flexible override set model.
+Update the Device Page V1 Configuration Preview (Prompt P4.3) and the V1 Configuration section context info to reflect the new flexible override set model.
 
 **Changes to device page context info (P4.1):**
 
-When set to V2 Engine, replace the single "Override Set: Cord Financial RMS Access" line with a list:
+When set to V1 Engine, replace the single "Override Set: Cord Financial RMS Access" line with a list:
 
 - Override Sets (3 active):
   - Cord Firewall (Any + Any + Any) — 3 params
@@ -2123,7 +2123,7 @@ When set to V2 Engine, replace the single "Override Set: Cord Financial RMS Acce
 If no override sets match: "Override Sets: None matching"
 If no override sets assigned to company: "Override Sets: None assigned"
 
-**Changes to V2 Configuration Preview (P4.3):**
+**Changes to V1 Configuration Preview (P4.3):**
 
 Same changes as the Resolution Preview (P8.4):
 
@@ -2134,7 +2134,7 @@ Same changes as the Resolution Preview (P8.4):
 
 **Changes to Side-by-Side Comparison (P4.4):**
 
-In the V2 column header, replace "Override Set: Cord Financial RMS Access" with:
+In the V1 column header, replace "Override Set: Cord Financial RMS Access" with:
 - "Override Sets: Cord Firewall, Baltech Scheduler, I-22 Power Config" (or "3 active" with expandable list if space is tight)
 
 **Sample device data updates:**
@@ -2142,9 +2142,9 @@ In the V2 column header, replace "Override Set: Cord Financial RMS Access" with:
 Update the sample devices (from P4.1) to show the new model:
 
 - Device "ATM-VZW-001" — Legacy, File: VZW_22_01282025.dat, Company: Cord Financial
-- Device "ATM-VZW-002" — V2 Engine, Rule: I-22 + Verizon + [ATM, Standard], Override Sets: Cord Firewall (Any+Any+Any), I-22 Power Config (I-22+Any+Any), Company: Cord Financial
-- Device "ATM-TMO-003" — V2 Engine, Rule: I-22 + T-Mobile + [ATM], Override Sets: Cord Firewall (Any+Any+Any), Company: Loaded ATMs
-- Device "ATM-VZW-004" — V2 Engine, Rule: 4100 + Verizon + [ATM], Override Sets: none, Company: Miele
+- Device "ATM-VZW-002" — V1 Engine, Rule: I-22 + Verizon + [ATM, Standard], Override Sets: Cord Firewall (Any+Any+Any), I-22 Power Config (I-22+Any+Any), Company: Cord Financial
+- Device "ATM-TMO-003" — V1 Engine, Rule: I-22 + T-Mobile + [ATM], Override Sets: Cord Firewall (Any+Any+Any), Company: Loaded ATMs
+- Device "ATM-VZW-004" — V1 Engine, Rule: 4100 + Verizon + [ATM], Override Sets: none, Company: Miele
 ```
 
 ---
@@ -2769,7 +2769,7 @@ A paginated, filterable table showing per-device push status. Columns:
 | Company | Company the device belongs to |
 | Model | Device model (e.g., I-22, 4100) |
 | Carrier | Verizon, T-Mobile, AT&T |
-| Config Source | "Legacy" or "V2 Engine" badge |
+| Config Source | "Legacy" or "V1 Engine" badge |
 | Push Status | Color-coded status badge: Verified (green), Pushed (blue), Failed (red), Mismatch (orange), Retry Queued (gray), No Push (light gray for devices never pushed) |
 | Last Push | Timestamp of last push attempt (e.g., "Apr 13, 2026 2:34 PM") |
 | Push Trigger | How the last push was triggered: "Check-in" / "On-demand" / "Retry" |
@@ -2779,7 +2779,7 @@ A paginated, filterable table showing per-device push status. Columns:
 **Filters:**
 
 - Status filter dropdown: All / Verified / Pushed (Pending) / Failed / Mismatch / Retry Queued / No Push
-- Config source filter: All / Legacy / V2 Engine
+- Config source filter: All / Legacy / V1 Engine
 - Company filter: dropdown with search
 - Model filter: dropdown
 - Carrier filter: dropdown
@@ -2794,7 +2794,7 @@ A paginated, filterable table showing per-device push status. Columns:
 - 2 devices: Failed — one "Unreachable", one "API Disabled"
 - 2 devices: Mismatch — push succeeded but hostname didn't update
 - 2 devices: Retry Queued — previous failure, queued for retry
-- 3 devices: No Push — V2 Engine but never pushed yet (newly configured)
+- 3 devices: No Push — V1 Engine but never pushed yet (newly configured)
 
 Use realistic device names (ATM-VZW-001 through ATM-VZW-020), a mix of companies (Cord Financial, Miele, Baltech, National ATM Services), models (I-22, 4100, 4500), and carriers (Verizon, T-Mobile, AT&T).
 ```
@@ -2833,8 +2833,8 @@ Body — summary of what will happen:
   | ATM-VZW-012 | Cord Financial | I-22 | Verizon | Mismatch |
   | ATM-ATT-015 | National ATM | 4500 | AT&T | Retry Queued |
 
-- Below the list, show a warning if any devices are on Legacy config: "Note: 1 device is using Legacy configuration. Push will use the legacy .DAT file, not the V2 engine."
-- If all devices are V2: "All selected devices use the V2 configuration engine."
+- Below the list, show a warning if any devices are on Legacy config: "Note: 1 device is using Legacy configuration. Push will use the legacy .DAT file, not the V1 engine."
+- If all devices are V1: "All selected devices use the V1 configuration engine."
 
 Buttons:
 - "Push Now" — primary/blue button. Triggers the push (see below).
@@ -2869,7 +2869,7 @@ Buttons:
 ## Prompt P10.4 — Device Page: Push Status Section
 
 ```
-Add a "Configuration Push Status" section to the device detail page. This shows the push history and current status for this specific device. Place it below the existing V2 Configuration Preview section (or below the configuration source selector area).
+Add a "Configuration Push Status" section to the device detail page. This shows the push history and current status for this specific device. Place it below the existing V1 Configuration Preview section (or below the configuration source selector area).
 
 **Section: "Configuration Push Status"**
 
@@ -2906,8 +2906,8 @@ Show a maximum of 10 entries with a "Show all" link to expand.
 
 **Sample data for different devices:**
 
-- Device ATM-VZW-002 (V2 Engine): Show as Verified, with 5 push history entries (mix of on-demand and check-in triggers, one failure in the history)
-- Device ATM-TMO-008 (V2 Engine): Show as Failed, last push attempt was unreachable, 2 entries in history
+- Device ATM-VZW-002 (V1 Engine): Show as Verified, with 5 push history entries (mix of on-demand and check-in triggers, one failure in the history)
+- Device ATM-TMO-008 (V1 Engine): Show as Failed, last push attempt was unreachable, 2 entries in history
 - Device ATM-VZW-001 (Legacy): Show as Verified with a note: "This device uses Legacy configuration. Push status tracks legacy .DAT file delivery."
 ```
 
@@ -2954,12 +2954,12 @@ Each card shows:
 
 ---
 
-## Prompt P10.6 — Device Page: Update V2 Context Info with Push Status Badge
+## Prompt P10.6 — Device Page: Update V1 Context Info with Push Status Badge
 
 ```
-Update the device page V2 Configuration section (from P4.1 / P8.5) to include a push status badge in the context info area. This gives the admin immediate visibility into whether this device's config is current without scrolling to the push status section.
+Update the device page V1 Configuration section (from P4.1 / P8.5) to include a push status badge in the context info area. This gives the admin immediate visibility into whether this device's config is current without scrolling to the push status section.
 
-**Changes to the V2 Engine context info block:**
+**Changes to the V1 Engine context info block:**
 
 Add a "Push Status" line to the existing context info, placed after the Override Sets line:
 
@@ -2969,7 +2969,7 @@ Current context info (from P8.5):
 - Service Plan: ATM, Standard
 - 3-Way Rule: I-22 + Verizon + [ATM, Standard]
 - Override Sets (3 active): Cord Firewall, Baltech Scheduler, I-22 Power Config
-- Config Source: V2 Engine
+- Config Source: V1 Engine
 
 Add:
 - Push Status: [color-coded badge] with detail text

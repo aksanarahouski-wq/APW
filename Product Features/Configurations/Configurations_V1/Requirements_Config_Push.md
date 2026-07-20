@@ -1,4 +1,4 @@
-# Configuration V2 — Config Push, Delivery & Verification
+# Configuration V1 — Config Push, Delivery & Verification
 
 **Phase:** Phase 2 (after Config Builder is finalized)
 **Last Updated:** April 13, 2026
@@ -7,7 +7,7 @@
 
 ## Purpose
 
-This document defines how V2 configurations get delivered to devices and how we verify they were actually applied. This is the critical bridge between "building configs in the portal" (Phase 1) and "configs running on devices."
+This document defines how V1 configurations get delivered to devices and how we verify they were actually applied. This is the critical bridge between "building configs in the portal" (Phase 1) and "configs running on devices."
 
 ---
 
@@ -39,7 +39,7 @@ Enhanced push model that leverages the existing check-in infrastructure as a tri
 
 | Component | Mechanism | New vs. Existing |
 |-----------|-----------|-----------------|
-| **Check-in triggered push** | Device checks in → hostname/version mismatch detected → system queues config push → pushes via RouterApi | Existing flow, enhanced for V2 compiled configs |
+| **Check-in triggered push** | Device checks in → hostname/version mismatch detected → system queues config push → pushes via RouterApi | Existing flow, enhanced for V1 compiled configs |
 | **On-demand manual push** | Admin selects specific devices in the portal → triggers immediate push via RouterApi, bypassing check-in wait | **New** |
 | **Retry on check-in** | If a push fails (device unreachable, API error), the device is flagged → next check-in triggers a retry push | Enhanced existing (smarter retry tracking) |
 
@@ -218,18 +218,18 @@ Retry behavior depends on the failure reason — not a one-size-fits-all escalat
 
 Admin can always manually trigger a retry from the push dashboard or device page, regardless of failure reason.
 
-### V2 Config Compilation → .DAT Output
+### V1 Config Compilation → .DAT Output
 
-The V2 configuration engine outputs the same .DAT file format that InHand devices consume today. Devices don't need to know or care that the config was built by the V2 engine — they receive a .DAT file via RouterApi, same as the legacy system.
+The V1 configuration engine outputs the same .DAT file format that InHand devices consume today. Devices don't need to know or care that the config was built by the V1 engine — they receive a .DAT file via RouterApi, same as the legacy system.
 
 ```
-V2 Parameter Set (DB)
+V1 Parameter Set (DB)
   → Compiler → .DAT file (device-compatible format)
   → Push .DAT via RouterApi (same as legacy)
   → Device receives and applies .DAT file (no change from device's perspective)
 ```
 
-This means **V2 doesn't require any device firmware changes.**
+This means **V1 doesn't require any device firmware changes.**
 
 ---
 
@@ -272,7 +272,7 @@ The push system's job is delivery and verification — not approval. Approval ha
 |-------|-------|------------|
 | **Phase 1** (current) | Config Builder — schema, inheritance, override sets, resolution logic | None — standalone |
 | **Phase 2** (this document) | Config Push, Delivery, Verification, Reporting | Depends on Phase 1 (needs compiled configs to push) |
-| **Legacy Coexistence** | Per-device toggle between legacy and V2 config systems | Spans all phases |
+| **Legacy Coexistence** | Per-device toggle between legacy and V1 config systems | Spans all phases |
 
 **On versioning:** There is no config versioning or rollback system in scope. If a pre-compilation approach is adopted (see Compilation Timing discussion), the system will naturally have a "current" and "previous" compiled state per device. Whether to retain previous versions — and how many — can be revisited once the compilation architecture is decided. For now, the recovery path is fix-and-push.
 
@@ -302,7 +302,7 @@ The push system's job is delivery and verification — not approval. Approval ha
 | 11 | Who should be notified when a push fails? Just admins? The company? | Drives notification design |
 | 12 | Should there be a distinction between "critical" config changes (push ASAP) and "routine" changes (push on next check-in)? | Affects push priority and urgency classification |
 | 13 | ~~Do we need to support "push to one device" for testing before fleet-wide rollout?~~ | Resolved — on-demand push supports this. Staging is handled by draft/approval in the config builder. |
-| 14 | How should the legacy config push coexist with V2 push? Separate mechanisms or unified? | Affects implementation approach during transition |
+| 14 | How should the legacy config push coexist with V1 push? Separate mechanisms or unified? | Affects implementation approach during transition |
 
 ### Design Questions (Internal)
 

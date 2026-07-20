@@ -1,6 +1,6 @@
-# Configuration Engine V2 — Questions and Clarifications
+# Configuration Engine V1 — Questions and Clarifications
 
-Questions and open items to discuss with the client (Adam/Devon) as we refine the V2 requirements.
+Questions and open items to discuss with the client (Adam/Devon) as we refine the V1 requirements.
 
 ---
 
@@ -8,7 +8,7 @@ Questions and open items to discuss with the client (Adam/Devon) as we refine th
 
 1. **Parameter import:** Will the initial ~700 parameters be imported from Adam's spreadsheet, or manually entered via the Grand Schema screen?
 
-2. **Migration path:** How do existing config files map to the new schema? Is there a migration, or do existing configs stay as-is until they're rebuilt in V2?
+2. **Migration path:** How do existing config files map to the new schema? Is there a migration, or do existing configs stay as-is until they're rebuilt in V1?
 
 3. **Mandatory parameter enforcement:** When should mandatory-but-null parameters be flagged? At config creation time? At device provisioning time? Both?
 

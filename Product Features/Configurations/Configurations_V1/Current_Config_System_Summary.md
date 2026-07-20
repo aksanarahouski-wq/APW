@@ -239,7 +239,7 @@ approved → pending_delete → deleted
 
 ## Limitations of the Current System
 
-These are the pain points that V2 aims to solve:
+These are the pain points that V1 aims to solve:
 
 1. **File-based configs** — The entire configuration is a monolithic .DAT file. Changing one parameter means re-uploading the whole file.
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Configuration Engine V2 — Resolution Logic</title>
+  <title>Configuration Engine V1 — Resolution Logic</title>
   <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -251,7 +251,7 @@
 <body>
 
   <div class="page-header">
-    <h1>Configuration Engine V2 — Resolution Logic</h1>
+    <h1>Configuration Engine V1 — Resolution Logic</h1>
     <p>How the system compiles the final configuration for a device by walking through 5 hierarchy levels. Click any step to see details.</p>
   </div>
 
@@ -406,7 +406,7 @@ flowchart TD
           <ul>
             <li>Schema defaults apply <strong>system-wide</strong> as the baseline for all devices, all models, all carriers</li>
             <li>Not every parameter has a schema default — some are intentionally null, meaning they must be set at a lower level</li>
-            <li>This level replaces the concept of a "global configuration layer" from V1</li>
+            <li>This level replaces the concept of a "global configuration layer" from the original design</li>
           </ul>
           <div class="example-box">wan0_proto → schema default: "dhcp"
 wl0_ssid   → schema default: "WATM-Default"

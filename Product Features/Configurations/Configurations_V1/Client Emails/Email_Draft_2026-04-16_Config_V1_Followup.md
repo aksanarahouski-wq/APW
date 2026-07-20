@@ -1,8 +1,8 @@
-# Email Draft — Config V2 Follow-up (April 16, 2026)
+# Email Draft — Config V1 Follow-up (April 16, 2026)
 
 **To:** Adam Curcie, Devon D'Andrea
 **CC:** Laura Perry, Richard Sacco, Aaron Diefes
-**Subject:** Config V2 — Follow-up from today's sessions + items for your review
+**Subject:** Config V1 — Follow-up from today's sessions + items for your review
 
 ---
 
